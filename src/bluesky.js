@@ -55,7 +55,7 @@ function sortFeeds(feeds) {
 
   let success = true;
   timedLog("Checking sorted");
-  for (let i=0; i<sorted.length; i++) {
+  for (let i = 0; i < sorted.length; i++) {
     if (sorted[i].sortAt != filtered[i].sortAt) {
       timedLog("Unsorted entry:", sorted[i].sortAt, filtered[i].sortAt);
       success = false;
