@@ -1,7 +1,7 @@
 import { AtpAgent } from '@atproto/api'
 import { readFileSync, existsSync, writeFileSync } from 'node:fs';
 
-import timedLog from './base.js';
+import { timedLog } from './base.js';
 
 import 'dotenv/config';
 import _ from 'lodash';
@@ -121,4 +121,21 @@ export default class BskyClient {
 
     return unseen;
   }
+
+  async like(uri, cid) {
+    return await this.agent.like(uri, cid);
+  }
+
+  async unlike(uri) {
+    return await this.agent.deleteLike(uri);
+  }
+
+  async repost(uri, cid) {
+    return await this.agent.repost(uri, cid);
+  }
+
+  async unrepost(uri) {
+    return await this.agent.deleteRepost(uri);
+  }
+
 }

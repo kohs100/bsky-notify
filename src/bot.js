@@ -17,6 +17,6 @@ export default class DiscordBot {
   }
 
   async send(msg, opts) {
-    this.channel.send(msg, opts);
+    return await this.channel.send(msg, opts);
   }
 }

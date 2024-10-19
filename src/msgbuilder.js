@@ -1,8 +1,8 @@
-import { EmbedBuilder } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 
 import _ from 'lodash';
 
-export default function toEmbed(feed) {
+export function toEmbed(feed) {
   const new_embed = new EmbedBuilder();
 
   const post = feed.post;
@@ -35,7 +35,7 @@ export default function toEmbed(feed) {
     const pid = uris[4];
     const url = `https://bsky.app/profile/${author_hndl}/post/${pid}`
     new_embed.setURL(url);
-    new_embed.setTitle(contain_image ? "Post with image" : "Post");
+    new_embed.setTitle(`Post by ${author_name}`);
   }
 
   const record = post.record;
@@ -45,4 +45,26 @@ export default function toEmbed(feed) {
   }
 
   return new_embed;
+}
+
+export function buildRow(is_liked, is_reposted) {
+  const statuscode = (is_liked ? "1" : "0") + (is_reposted ? "1" : "0");
+
+  const btnLike = new ButtonBuilder()
+    .setCustomId(`btn-like-${statuscode}`)
+    .setLabel('Like')
+    .setEmoji('❤')
+    .setStyle(is_liked ? ButtonStyle.Danger : ButtonStyle.Secondary);
+
+  const btnRepost = new ButtonBuilder()
+    .setCustomId(`btn-repost-${statuscode}`)
+    .setLabel('Repost')
+    .setEmoji('♻')
+    .setStyle(is_reposted ? ButtonStyle.Success : ButtonStyle.Secondary);
+
+  const row = new ActionRowBuilder()
+    .addComponents(btnLike)
+    .addComponents(btnRepost);
+
+  return row;
 }
