@@ -1,18 +1,23 @@
 import BskyClient from './bluesky.js';
 import DiscordBot from './bot.js';
-import { toEmbed, buildRow } from './msgbuilder.js';
-import { timedLog, AsyncIntervalCtrl } from './base.js';
+import { toEmbed, buildRow, toError } from './msgbuilder.js';
+import { timedLog, AsyncIntervalCtrl, waitFor, getTimestamp } from './base.js';
 
 import _ from 'lodash';
 
 import 'dotenv/config';
-import { ComponentType } from 'discord.js';
+import { ComponentType, GuildBanManager } from 'discord.js';
+
+const BSKY_FETCH_RATE = process.env.BSKY_FETCH_RATE;
+const BSKY_MAX_RETRY = process.env.BSKY_MAX_RETRY;
+const BSKY_RETRY_AFTER = process.env.BSKY_RETRY_AFTER;
 
 const GVAR = {
   client: null,
   bot: null,
   uristore_like: {},
   uristore_repost: {},
+  errcnt_mainloop: 0
 }
 
 async function loop() {
@@ -108,7 +113,7 @@ async function loop() {
   }
 }
 
-const main = async () => {
+async function main() {
   const client = new BskyClient();
   await client.login();
 
@@ -122,8 +127,32 @@ const main = async () => {
   GVAR.client = client;
   GVAR.bot = bot;
 
+  for (let i = 0; i < BSKY_MAX_RETRY; i++) {
+    timedLog(`waiting for ${BSKY_RETRY_AFTER}msec...`);
+    await waitFor(BSKY_RETRY_AFTER);
+    timedLog(`waited for ${BSKY_RETRY_AFTER}msec...`);
+  }
+
+  await bot.dbg(`Bot started at ${getTimestamp()}`);
+
   const ictrl = new AsyncIntervalCtrl();
-  await ictrl.set(loop, 10000); // 10 second
+  await ictrl.set(async () => {
+    try {
+      await loop();
+      GVAR.errcnt_mainloop = 0;
+    } catch (e) {
+      GVAR.errcnt_mainloop += 1;
+
+      bot.dbg({
+        content: `Bot errored ${GVAR.errcnt_mainloop} at ${getTimestamp()}`,
+        embeds: toError(e)
+      });
+
+      if (GVAR.errcnt_mainloop >= BSKY_MAX_RETRY) {
+        throw new Error(`Error count exceeded MAX_RETRY: ${BSKY_MAX_RETRY}.`)
+      }
+    }
+  }, BSKY_FETCH_RATE);
 }
 
 main().then(res => {

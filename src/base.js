@@ -1,9 +1,18 @@
-export function timedLog(...args) {
+export function getTimestamp() {
   const now = new Date().toISOString()
     .replace(/T/, ' ')
     .replace(/\..+/, '');
+  return now;
+}
+
+export function timedLog(...args) {
+  const now = getTimestamp();
 
   console.log(`[${now}]`, ...args);
+}
+
+export function waitFor(msec) {
+  return new Promise(res => setTimeout(res, msec));
 }
 
 export class AsyncIntervalCtrl {
@@ -33,5 +42,4 @@ export class AsyncIntervalCtrl {
     if (this.running[iid])
       this.running[iid] = false;
   }
-
 }

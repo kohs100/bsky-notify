@@ -1,6 +1,24 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Embed, EmbedBuilder } from 'discord.js';
 
 import _ from 'lodash';
+
+export function toError(err) {
+  const now = new Date();
+
+  const msg_embed = new EmbedBuilder();
+
+  msg_embed.setTitle(`Error message`);
+  msg_embed.setDescription(err.toString());
+  msg_embed.setTimestamp(now);
+
+  const stk_embed = new EmbedBuilder();
+
+  stk_embed.setTitle(`Stack trace`);
+  stk_embed.setDescription(err.stack.toString());
+  stk_embed.setTimestamp(now);
+
+  return [msg_embed, stk_embed];
+}
 
 export function toEmbed(feed) {
   const new_embed = new EmbedBuilder();
