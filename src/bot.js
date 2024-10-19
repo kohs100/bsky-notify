@@ -1,6 +1,7 @@
 import { Client } from "discord.js";
 import 'dotenv/config';
 import _ from "lodash";
+import { timedLog } from "./base";
 
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 const BOT_CHID = process.env.DISCORD_CHANNEL_ID;
@@ -18,7 +19,12 @@ export default class DiscordBot {
     this.channel = await this.client.channels.fetch(BOT_CHID);
 
     if (!_.isUndefined(BOT_DBG)) {
-      this._dbgch = await this.client.channels.fetch(BOT_DBG);
+      try {
+        this._dbgch = await this.client.channels.fetch(BOT_DBG);
+        timedLog("Fetched debug channel!");
+      } catch (e) {
+        timedLog("Failed to fetch debug channel:", e);
+      }
     }
   }
 
@@ -27,7 +33,7 @@ export default class DiscordBot {
   }
 
   async dbg(msg, opts) {
-    if (!_.isUndefined(BOT_DBG)) {
+    if (!_.isUndefined(this._dbgch)) {
       return await this._dbgch.send(msg, opts);
     }
   }
