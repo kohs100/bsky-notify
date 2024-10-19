@@ -1,7 +1,7 @@
 import { Client } from "discord.js";
 import 'dotenv/config';
 import _ from "lodash";
-import { timedLog } from "./base";
+import { timedLog } from "./base.js";
 
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 const BOT_CHID = process.env.DISCORD_CHANNEL_ID;

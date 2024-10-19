@@ -6,7 +6,7 @@ import { timedLog, AsyncIntervalCtrl, waitFor, getTimestamp } from './base.js';
 import _ from 'lodash';
 
 import 'dotenv/config';
-import { ComponentType, GuildBanManager } from 'discord.js';
+import { ComponentType } from 'discord.js';
 
 const BSKY_FETCH_RATE = process.env.BSKY_FETCH_RATE;
 const BSKY_MAX_RETRY = process.env.BSKY_MAX_RETRY;
@@ -139,7 +139,12 @@ async function main() {
   await ictrl.set(async () => {
     try {
       await loop();
-      GVAR.errcnt_mainloop = 0;
+      if (GVAR.errcnt_mainloop > 0) {
+        GVAR.errcnt_mainloop = 0;
+        bot.dbg({
+          content: `Bot recovered from error.`
+        });
+      }
     } catch (e) {
       GVAR.errcnt_mainloop += 1;
 
