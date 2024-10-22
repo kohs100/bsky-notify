@@ -1,24 +1,33 @@
-import BskyClient from './bluesky.js';
-import DiscordBot from './bot.js';
-import { toEmbed, buildRow, toError } from './msgbuilder.js';
-import { timedLog, AsyncIntervalCtrl, waitFor, getTimestamp } from './base.js';
-
 import _ from 'lodash';
 
 import 'dotenv/config';
-import { ComponentType } from 'discord.js';
+import { ComponentType, EmbedBuilder } from 'discord.js';
+import DeeplTranslator from './deepl.js';
 
+import { timedLog, AsyncIntervalCtrl, waitFor, getTimestamp, GVAR } from './base.js';
+import BskyClient from './bluesky.js';
+import DiscordBot from './bot.js';
+import { toEmbed, buildRow, toError } from './msgbuilder.js';
+
+const BSKY_SRV = process.env.BSKY_SRV;
+const BSKY_ID = process.env.BSKY_ID;
+const BSKY_PASS = process.env.BSKY_PASS;
+const BSKY_SESS = process.env.BSKY_SESS;
 const BSKY_FETCH_RATE = process.env.BSKY_FETCH_RATE;
 const BSKY_MAX_RETRY = process.env.BSKY_MAX_RETRY;
 const BSKY_RETRY_AFTER = process.env.BSKY_RETRY_AFTER;
 
-const GVAR = {
-  client: null,
-  bot: null,
-  uristore_like: {},
-  uristore_repost: {},
-  errcnt_mainloop: 0
-}
+const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
+const DISCORD_CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
+const DISCORD_DBGCH_ID = process.env.DISCORD_DBGCH_ID;
+
+const DISCORD_MAX_RETRY = process.env.DISCORD_MAX_RETRY;
+const DISCORD_RETRY_AFTER = process.env.DISCORD_RETRY_AFTER;
+const DISCORD_CTX_LENGTH = process.env.DISCORD_CTX_LENGTH;
+
+const DEEPL_API_KEY = process.env.DEEPL_API_KEY;
+const DEEPL_MAX_RETRY = process.env.DEEPL_MAX_RETRY;
+const DEEPL_RETRY_AFTER = process.env.DEEPL_RETRY_AFTER;
 
 async function loop() {
   timedLog("Start fetching new feeds...");
@@ -60,7 +69,7 @@ async function loop() {
 
     const collector = msg.createMessageComponentCollector({
       componentType: ComponentType.Button,
-      time: 60_000,
+      time: DISCORD_CTX_LENGTH,
     });
 
     collector.on('end', () => {
@@ -76,61 +85,100 @@ async function loop() {
       const uri = feed.post.uri;
       const cid = feed.post.cid;
 
-      if (tokens[0] != 'btn') return;
-
-      let is_liked = tokens[2][0] == 1;
-      let is_reposted = tokens[2][1] == 1;
-
-      if (tokens[1] == 'like') {
-        if (is_liked) {
-          const uri_like = GVAR.uristore_like[uri];
-          await GVAR.client.unlike(uri_like);
-          is_liked = false;
-        } else {
-          const { uri: uri_like } = await GVAR.client.like(uri, cid);
-          // timedLog("uri_like:", uri_like);
-          GVAR.uristore_like[uri] = uri_like
-          is_liked = true;
-        }
-      } else if (tokens[1] == 'repost') {
-        if (is_reposted) {
-          const uri_repost = GVAR.uristore_repost[uri];
-          await GVAR.client.unrepost(uri_repost);
-          is_reposted = false;
-        } else {
-          const { uri: uri_repost } = await GVAR.client.repost(uri, cid);
-          // timedLog("uri_repost:", uri_repost);
-          GVAR.uristore_repost[uri] = uri_repost
-          is_reposted = true;
-        }
-      } else {
+      if (tokens[0] != 'btn') {
+        timedLog(i);
+        await GVAR.bot.dbg(`Invalid customId: ${i.customId}`);
+        // Exit without completing interaction
         return;
-      }
+      };
 
-      const row = buildRow(is_liked, is_reposted);
-      await i.update({ components: [row] });
+      if (tokens[1] == 'bsky') {
+        let is_liked = tokens[2][0] == 1;
+        let is_reposted = tokens[2][1] == 1;
+
+        if (tokens[1] == 'like') {
+          if (is_liked) {
+            const uri_like = GVAR.uristore_like[uri];
+            await GVAR.client.unlike(uri_like);
+            is_liked = false;
+          } else {
+            const { uri: uri_like } = await GVAR.client.like(uri, cid);
+            // timedLog("uri_like:", uri_like);
+            GVAR.uristore_like[uri] = uri_like
+            is_liked = true;
+          }
+        } else if (tokens[1] == 'repost') {
+          if (is_reposted) {
+            const uri_repost = GVAR.uristore_repost[uri];
+            await GVAR.client.unrepost(uri_repost);
+            is_reposted = false;
+          } else {
+            const { uri: uri_repost } = await GVAR.client.repost(uri, cid);
+            // timedLog("uri_repost:", uri_repost);
+            GVAR.uristore_repost[uri] = uri_repost
+            is_reposted = true;
+          }
+        } else {
+          timedLog(i);
+          await GVAR.bot.dbg(`Invalid bsky button name: ${i.customId}`);
+          // Exit without completing interaction
+          return;
+        }
+
+        const row = buildRow(is_liked, is_reposted);
+        await i.update({ components: [row] });
+      } else if (tokens[1] == 'trans') {
+        if (_.isNull(GVAR.translator)) {
+          // Cannot happen.. Maybe?
+          timedLog(i);
+          await GVAR.bot.dbg(`Translator not initialized!`);
+          // Exit without completing interaction
+          return;
+        }
+        const embeds = [];
+        for (const rembed of i.message.embeds) {
+          const desc = rembed.description;
+          const tdesc = await GVAR.translator.translate(desc);
+
+          const embed = new EmbedBuilder(rembed);
+          embed.setDescription(tdesc);
+
+          embeds.push(embed);
+        }
+
+        await i.update({ embeds: embeds });
+      } else {
+        timedLog(i);
+        await GVAR.bot.dbg(`Invalid button name: ${i.customId}`);
+        // Exit without completing interaction
+      }
     });
   }
 }
 
 async function main() {
-  const client = new BskyClient();
-  await client.login();
+  const client = new BskyClient(BSKY_SRV, BSKY_SESS);
+  await client.login(BSKY_ID, BSKY_PASS);
 
   timedLog("info: bsky login success!");
 
-  const bot = new DiscordBot();
-  await bot.login();
+  const bot = new DiscordBot(DISCORD_MAX_RETRY, DISCORD_RETRY_AFTER);
+  await bot.login(DISCORD_BOT_TOKEN, DISCORD_CHANNEL_ID, DISCORD_DBGCH_ID);
 
   timedLog("info: bot login success!");
 
   GVAR.client = client;
   GVAR.bot = bot;
 
-  for (let i = 0; i < BSKY_MAX_RETRY; i++) {
-    timedLog(`waiting for ${BSKY_RETRY_AFTER}msec...`);
-    await waitFor(BSKY_RETRY_AFTER);
-    timedLog(`waited for ${BSKY_RETRY_AFTER}msec...`);
+  if (_.isUndefined(DEEPL_API_KEY)) {
+    timedLog("info: translator not available.");
+  } else {
+    GVAR.translator = new DeeplTranslator(
+      DEEPL_API_KEY,
+      DEEPL_MAX_RETRY,
+      DEEPL_RETRY_AFTER
+    );
+    timedLog("info: translator initialized.");
   }
 
   await bot.dbg(`Bot started at ${getTimestamp()}`);

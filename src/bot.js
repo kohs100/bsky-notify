@@ -1,26 +1,25 @@
-import { Client } from "discord.js";
-import 'dotenv/config';
 import _ from "lodash";
-import { timedLog } from "./base.js";
 
-const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
-const BOT_CHID = process.env.DISCORD_CHANNEL_ID;
-const BOT_DBG = process.env.DISCORD_DBGCH_ID;
+import { Client } from "discord.js";
+
+import { timedLog, waitFor } from "./base.js";
 
 export default class DiscordBot {
-  constructor() {
+  constructor(max_retry, retry_after) {
+    this.max_retry = max_retry;
+    this.retry_after = retry_after;
     this.client = new Client({
       intents: []
     });
   }
 
-  async login() {
-    await this.client.login(BOT_TOKEN);
-    this.channel = await this.client.channels.fetch(BOT_CHID);
+  async login(token, chid, dbgchid) {
+    await this.client.login(token);
+    this.channel = await this.client.channels.fetch(chid);
 
-    if (!_.isUndefined(BOT_DBG)) {
+    if (!_.isUndefined(dbgchid)) {
       try {
-        this._dbgch = await this.client.channels.fetch(BOT_DBG);
+        this._dbgch = await this.client.channels.fetch(dbgchid);
         timedLog("Fetched debug channel!");
       } catch (e) {
         timedLog("Failed to fetch debug channel:", e);
@@ -29,6 +28,15 @@ export default class DiscordBot {
   }
 
   async send(msg, opts) {
+    for (const i = 0; i < this.max_retry; i++) {
+      try {
+        return await this.channel.send(msg, opts);
+      } catch (e) {
+        timedLog(e);
+        timedLog(e.stack);
+        await waitFor(this.retry_after);
+      }
+    }
     return await this.channel.send(msg, opts);
   }
 

@@ -1,6 +1,8 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Embed, EmbedBuilder } from 'discord.js';
-
 import _ from 'lodash';
+
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
+
+import { GVAR } from './base.js';
 
 export function toError(err) {
   const now = new Date();
@@ -66,23 +68,30 @@ export function toEmbed(feed) {
 }
 
 export function buildRow(is_liked, is_reposted) {
+  const row = new ActionRowBuilder();
   const statuscode = (is_liked ? "1" : "0") + (is_reposted ? "1" : "0");
 
   const btnLike = new ButtonBuilder()
-    .setCustomId(`btn-like-${statuscode}`)
+    .setCustomId(`btn-bsky-like-${statuscode}`)
     .setLabel('Like')
     .setEmoji('❤')
     .setStyle(is_liked ? ButtonStyle.Danger : ButtonStyle.Secondary);
+  row.addComponents(btnLike);
 
   const btnRepost = new ButtonBuilder()
-    .setCustomId(`btn-repost-${statuscode}`)
+    .setCustomId(`btn-bsky-repost-${statuscode}`)
     .setLabel('Repost')
     .setEmoji('♻')
     .setStyle(is_reposted ? ButtonStyle.Success : ButtonStyle.Secondary);
+  row.addComponents(btnRepost);
 
-  const row = new ActionRowBuilder()
-    .addComponents(btnLike)
-    .addComponents(btnRepost);
+  if (!_.isNull(GVAR.translator)) {
+    const btnTranslate = new ButtonBuilder()
+      .setCustomId(`btn-trans-deepl`)
+      .setLabel('Translate')
+      .setStyle(ButtonStyle.Secondary);
+    row.addComponents(btnTranslate);
+  }
 
   return row;
 }

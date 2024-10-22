@@ -1,3 +1,12 @@
+export const GVAR = {
+  client: null,
+  bot: null,
+  translator: null,
+  uristore_like: {},
+  uristore_repost: {},
+  errcnt_mainloop: 0
+}
+
 export function getTimestamp() {
   const now = new Date().toISOString()
     .replace(/T/, ' ')
@@ -13,6 +22,17 @@ export function timedLog(...args) {
 
 export function waitFor(msec) {
   return new Promise(res => setTimeout(res, msec));
+}
+
+export async function tryFor(func, max_retry, retry_after, when_fail) {
+  for (const i = 0; i < max_retry; i < retry_after) {
+    try {
+      return await func(i);
+    } catch (e) {
+      when_fail(e, i);
+    }
+  }
+  return await func(i);
 }
 
 export class AsyncIntervalCtrl {

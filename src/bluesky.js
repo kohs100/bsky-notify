@@ -1,15 +1,9 @@
-import { AtpAgent } from '@atproto/api'
-import { readFileSync, existsSync, writeFileSync } from 'node:fs';
-
-import { timedLog } from './base.js';
-
-import 'dotenv/config';
 import _ from 'lodash';
 
-const BSKY_SRV = process.env.BSKY_SRV;
-const BSKY_ID = process.env.BSKY_ID;
-const BSKY_PASS = process.env.BSKY_PASS;
-const BSKY_SESS = process.env.BSKY_SESS;
+import { readFileSync, existsSync, writeFileSync } from 'node:fs';
+import { AtpAgent } from '@atproto/api'
+
+import { timedLog } from './base.js';
 
 function getSortDate(feed) {
   if (Object.hasOwn(feed, "reason")) {
@@ -69,28 +63,30 @@ function sortFeeds(feeds) {
 }
 
 export default class BskyClient {
-  constructor() {
+  constructor(server, sess_path) {
+    this.sess_path = sess_path;
+
     this.latest = new Date();
     this.agent = new AtpAgent({
-      service: BSKY_SRV,
+      service: server,
       persistSession: (evt, sess) => {
         timedLog("persistSession:", evt);
-        writeFileSync(BSKY_SESS, JSON.stringify(sess));
+        writeFileSync(this.sess_path, JSON.stringify(sess));
       }
     });
   }
 
-  async login() {
-    if (existsSync(BSKY_SESS)) {
-      timedLog("Using existing session from", BSKY_SESS);
-      const data = readFileSync(BSKY_SESS);
+  async login(id, passwd) {
+    if (existsSync(this.sess_path)) {
+      timedLog("Using existing session from", this.sess_path);
+      const data = readFileSync(this.sess_path);
       const sess = JSON.parse(data);
       await this.agent.resumeSession(sess);
     } else {
-      timedLog("Logging in with", BSKY_ID, "...");
+      timedLog("Logging in with", id, "...");
       await this.agent.login({
-        identifier: BSKY_ID,
-        password: BSKY_PASS
+        identifier: id,
+        password: passwd
       });
     }
   }
