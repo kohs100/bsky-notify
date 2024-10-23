@@ -141,7 +141,10 @@ async function loop() {
           const tdesc = await GVAR.translator.translate(desc);
 
           const embed = new EmbedBuilder(rembed);
-          embed.setDescription(tdesc);
+          embed.addFields({
+            name: 'Translated',
+            value: tdesc
+          });
 
           embeds.push(embed);
         }
