@@ -96,7 +96,7 @@ async function loop() {
         let is_liked = tokens[2][0] == 1;
         let is_reposted = tokens[2][1] == 1;
 
-        if (tokens[1] == 'like') {
+        if (tokens[2] == 'like') {
           if (is_liked) {
             const uri_like = GVAR.uristore_like[uri];
             await GVAR.client.unlike(uri_like);
@@ -107,7 +107,7 @@ async function loop() {
             GVAR.uristore_like[uri] = uri_like
             is_liked = true;
           }
-        } else if (tokens[1] == 'repost') {
+        } else if (tokens[2] == 'repost') {
           if (is_reposted) {
             const uri_repost = GVAR.uristore_repost[uri];
             await GVAR.client.unrepost(uri_repost);

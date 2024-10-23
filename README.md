@@ -8,10 +8,11 @@ Enable bluesky feed notification through discord bot.
 * Image support (If multiple images, first image only)
 * Like/Unlike/Repost/Unrepost from discord with action row button
 * Optional debug channel to post debug informations
+* Translation with DeepL API
 
 ### TODO
 * Multiple images support
-* Self-replying post tree support
+* (!) Self-replying post tree support
 * Integrate database to support persistent context storage
   * ex. Persistent button interaction support
 * Dockerize?
