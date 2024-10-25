@@ -1,8 +1,8 @@
 import _ from 'lodash';
 
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, EmbedBuilder } from 'discord.js';
 
-import { GVAR } from './base.js';
+import { GVAR, timedLog } from './base.js';
 
 export function toError(err) {
   const now = new Date();
@@ -94,4 +94,101 @@ export function buildRow(is_liked, is_reposted) {
   }
 
   return row;
+}
+
+export class InteractiveMessage {
+  constructor(lifetime) {
+    this.lifetime = lifetime;
+    this.uristore = {};
+  }
+
+  async send(feed) {
+    const embed = toEmbed(feed);
+    const row = buildRow(false, false);
+
+    const msg = await GVAR.bot.send({ embeds: [embed], components: [row] });
+
+    const collector = msg.createMessageComponentCollector({
+      componentType: ComponentType.Button,
+      time: this.lifetime,
+    });
+
+    collector.on('collect', async i => {
+      const tokens = i.customId.split('-');
+
+      const uri = feed.post.uri;
+      const cid = feed.post.cid;
+
+      if (tokens[0] != 'btn') {
+        timedLog(i);
+        await GVAR.bot.dbg(`Invalid customId: ${i.customId}`);
+        // Exit without completing interaction
+        return;
+      };
+
+      if (tokens[1] == 'bsky') {
+        let is_liked = tokens[3][0] == 1;
+        let is_reposted = tokens[3][1] == 1;
+
+        if (tokens[2] == 'like') {
+          if (is_liked) {
+            const uri_like = this.uristore.like;
+            await GVAR.client.unlike(uri_like);
+            is_liked = false;
+          } else {
+            const { uri: uri_like } = await GVAR.client.like(uri, cid);
+            // timedLog("uri_like:", uri_like);
+            this.uristore.like = uri_like
+            is_liked = true;
+          }
+        } else if (tokens[2] == 'repost') {
+          if (is_reposted) {
+            const uri_repost = this.uristore.repost;
+            await GVAR.client.unrepost(uri_repost);
+            is_reposted = false;
+          } else {
+            const { uri: uri_repost } = await GVAR.client.repost(uri, cid);
+            // timedLog("uri_repost:", uri_repost);
+            this.uristore.repost = uri_repost
+            is_reposted = true;
+          }
+        } else {
+          timedLog(i);
+          await GVAR.bot.dbg(`Invalid bsky button name: ${i.customId}`);
+          // Exit without completing interaction
+          return;
+        }
+
+        const row = buildRow(is_liked, is_reposted);
+        await i.update({ components: [row] });
+      } else if (tokens[1] == 'trans') {
+        if (_.isNull(GVAR.translator)) {
+          // Cannot happen.. Maybe?
+          timedLog(i);
+          await GVAR.bot.dbg(`Translator not initialized!`);
+          // Exit without completing interaction
+          return;
+        }
+        const embeds = [];
+        for (const rembed of i.message.embeds) {
+          const desc = rembed.description;
+          const tdesc = await GVAR.translator.translate(desc);
+
+          const embed = new EmbedBuilder(rembed);
+          embed.addFields({
+            name: 'Translated',
+            value: tdesc
+          });
+
+          embeds.push(embed);
+        }
+
+        await i.update({ embeds: embeds });
+      } else {
+        timedLog(i);
+        await GVAR.bot.dbg(`Invalid button name: ${i.customId}`);
+        // Exit without completing interaction
+      }
+    });
+  }
 }
