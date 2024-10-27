@@ -6,7 +6,7 @@ import DeeplTranslator from './deepl.js';
 import { timedLog, AsyncIntervalCtrl, getTimestamp, GVAR } from './base.js';
 import BskyClient from './bluesky.js';
 import DiscordBot from './bot.js';
-import { toError, InteractiveMessage } from './msgbuilder.js';
+import { InteractiveMessage } from './msgbuilder.js';
 
 const BSKY_SRV = process.env.BSKY_SRV;
 const BSKY_ID = process.env.BSKY_ID;
@@ -62,8 +62,8 @@ async function loop() {
   });
 
   for (const feed of filtered) {
-    const msg = new InteractiveMessage(DISCORD_CTX_LENGTH);
-    await msg.send(feed);
+    const msg = new InteractiveMessage(feed, DISCORD_CTX_LENGTH);
+    await msg.send();
   }
 }
 
@@ -107,10 +107,7 @@ async function main() {
     } catch (e) {
       GVAR.errcnt_mainloop += 1;
 
-      bot.dbg({
-        content: `Bot errored ${GVAR.errcnt_mainloop} at ${getTimestamp()}`,
-        embeds: toError(e)
-      });
+      await bot.catch(e, `Bot errored ${GVAR.errcnt_mainloop}`);
 
       if (GVAR.errcnt_mainloop >= BSKY_MAX_RETRY) {
         throw new Error(`Error count exceeded MAX_RETRY: ${BSKY_MAX_RETRY}.`)

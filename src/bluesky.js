@@ -117,21 +117,4 @@ export default class BskyClient {
 
     return unseen;
   }
-
-  async like(uri, cid) {
-    return await this.agent.like(uri, cid);
-  }
-
-  async unlike(uri) {
-    return await this.agent.deleteLike(uri);
-  }
-
-  async repost(uri, cid) {
-    return await this.agent.repost(uri, cid);
-  }
-
-  async unrepost(uri) {
-    return await this.agent.deleteRepost(uri);
-  }
-
 }

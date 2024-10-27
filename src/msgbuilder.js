@@ -4,24 +4,6 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, EmbedBuild
 
 import { GVAR, timedLog } from './base.js';
 
-export function toError(err) {
-  const now = new Date();
-
-  const msg_embed = new EmbedBuilder();
-
-  msg_embed.setTitle(`Error message`);
-  msg_embed.setDescription(err.toString());
-  msg_embed.setTimestamp(now);
-
-  const stk_embed = new EmbedBuilder();
-
-  stk_embed.setTitle(`Stack trace`);
-  stk_embed.setDescription(err.stack.toString());
-  stk_embed.setTimestamp(now);
-
-  return [msg_embed, stk_embed];
-}
-
 export function toEmbed(feed) {
   const new_embed = new EmbedBuilder();
 
@@ -97,27 +79,85 @@ export function buildRow(is_liked, is_reposted) {
 }
 
 export class InteractiveMessage {
-  constructor(lifetime) {
+  constructor(feed, lifetime) {
     this.lifetime = lifetime;
-    this.uristore = {};
+
+    this.uri_like = null;
+    this.uri_repost = null;
+    this.feed = feed;
   }
 
-  async send(feed) {
-    const embed = toEmbed(feed);
+  async _like() {
+    const uri = this.feed.post.uri;
+    const cid = this.feed.post.cid;
+
+    await GVAR.bot.assert(
+      _.isNull(this.uri_like),
+      `Already defined uri_like for post ${uri}`
+    );
+
+    const { uri: uri_like } = await GVAR.client.agent.like(uri, cid);
+    this.uri_like = uri_like
+  }
+
+  async _unlike() {
+    const uri = this.feed.post.uri;
+    const uri_like = this.uri_like;
+
+    await GVAR.bot.assert(
+      !_.isNull(this.uri_like),
+      `No uri_like for post ${uri}`
+    );
+
+    await GVAR.client.agent.deleteLike(uri_like);
+    this.uri_like = null;
+  }
+
+  async _repost() {
+    const uri = this.feed.post.uri;
+    const cid = this.feed.post.cid;
+
+    await GVAR.bot.assert(
+      _.isNull(this.uri_repost),
+      `Already defined uri_repost for post ${uri}`
+    );
+
+    const { uri: uri_repost } = await GVAR.client.agent.repost(uri, cid);
+    this.uri_repost = uri_repost
+  }
+
+  async _unrepost() {
+    const uri = this.feed.post.uri;
+    const uri_repost = this.uri_repost;
+
+    await GVAR.bot.assert(
+      !_.isNull(this.uri_repost),
+      `No uri_repost for post ${uri}`
+    );
+
+    await GVAR.client.agent.deleteRepost(uri_repost);
+    this.uri_repost = null;
+  }
+
+  async send() {
+    const embed = toEmbed(this.feed);
     const row = buildRow(false, false);
 
     const msg = await GVAR.bot.send({ embeds: [embed], components: [row] });
 
     const collector = msg.createMessageComponentCollector({
       componentType: ComponentType.Button,
-      time: this.lifetime,
+      // time: this.lifetime,
+      time: 20_000,
     });
+
+    collector.on('end', async (collected, reason) => {
+      timedLog("end called", reason);
+      await msg.edit({ components: [] });
+    })
 
     collector.on('collect', async i => {
       const tokens = i.customId.split('-');
-
-      const uri = feed.post.uri;
-      const cid = feed.post.cid;
 
       if (tokens[0] != 'btn') {
         timedLog(i);
@@ -132,24 +172,18 @@ export class InteractiveMessage {
 
         if (tokens[2] == 'like') {
           if (is_liked) {
-            const uri_like = this.uristore.like;
-            await GVAR.client.unlike(uri_like);
+            await this._unlike();
             is_liked = false;
           } else {
-            const { uri: uri_like } = await GVAR.client.like(uri, cid);
-            // timedLog("uri_like:", uri_like);
-            this.uristore.like = uri_like
+            await this._like();
             is_liked = true;
           }
         } else if (tokens[2] == 'repost') {
           if (is_reposted) {
-            const uri_repost = this.uristore.repost;
-            await GVAR.client.unrepost(uri_repost);
+            await this._unrepost();
             is_reposted = false;
           } else {
-            const { uri: uri_repost } = await GVAR.client.repost(uri, cid);
-            // timedLog("uri_repost:", uri_repost);
-            this.uristore.repost = uri_repost
+            await this._repost();
             is_reposted = true;
           }
         } else {

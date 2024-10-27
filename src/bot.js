@@ -1,8 +1,26 @@
 import _ from "lodash";
 
-import { Client } from "discord.js";
+import { Client, EmbedBuilder } from "discord.js";
 
-import { timedLog, waitFor } from "./base.js";
+import { getTimestamp, timedLog, waitFor } from "./base.js";
+
+function fromError(err) {
+  const now = new Date();
+
+  const msg_embed = new EmbedBuilder();
+
+  msg_embed.setTitle(`Error message`);
+  msg_embed.setDescription(err.toString());
+  msg_embed.setTimestamp(now);
+
+  const stk_embed = new EmbedBuilder();
+
+  stk_embed.setTitle(`Stack trace`);
+  stk_embed.setDescription(err.stack.toString());
+  stk_embed.setTimestamp(now);
+
+  return [msg_embed, stk_embed];
+}
 
 export default class DiscordBot {
   constructor(max_retry, retry_after) {
@@ -43,6 +61,26 @@ export default class DiscordBot {
   async dbg(msg, opts) {
     if (!_.isUndefined(this._dbgch)) {
       return await this._dbgch.send(msg, opts);
+    }
+  }
+
+  async catch(err, msg) {
+    return await this.dbg({
+      content: `Exception at ${getTimestamp()} with: ${msg}`,
+      embeds: fromError(err)
+    });
+  }
+
+  async assert(condition, msg) {
+    if (!condition) {
+      try {
+        throw new Error(msg);
+      } catch (e) {
+        return await this.dbg({
+          content: `Assertion failed at ${getTimestamp()}`,
+          embeds: fromError(e)
+        });
+      }
     }
   }
 }

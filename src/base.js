@@ -2,8 +2,6 @@ export const GVAR = {
   client: null,
   bot: null,
   translator: null,
-  uristore_like: {},
-  uristore_repost: {},
   errcnt_mainloop: 0
 }
 
