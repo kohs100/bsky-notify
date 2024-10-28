@@ -1,12 +1,13 @@
 import _ from 'lodash';
 
 import 'dotenv/config';
-import DeeplTranslator from './deepl.js';
 
-import { timedLog, AsyncIntervalCtrl, getTimestamp, GVAR } from './base.js';
+import { timedLog, AsyncIntervalCtrl, getTimestamp, singleton } from './base.js';
+
+import DeeplTranslator from './deepl.js';
 import BskyClient from './bluesky.js';
 import DiscordBot from './bot.js';
-import { InteractiveMessage } from './msgbuilder.js';
+import InteractiveMessage from './msgbuilder.js';
 
 const BSKY_SRV = process.env.BSKY_SRV;
 const BSKY_ID = process.env.BSKY_ID;
@@ -30,7 +31,7 @@ const DEEPL_RETRY_AFTER = process.env.DEEPL_RETRY_AFTER;
 
 async function loop() {
   timedLog("Start fetching new feeds...");
-  const feeds = await GVAR.client.getNew(50);
+  const feeds = await singleton.client.getNew(50);
 
   timedLog(`Unseed feeds before filtering: ${feeds.length}`);
 
@@ -78,13 +79,13 @@ async function main() {
 
   timedLog("info: bot login success!");
 
-  GVAR.client = client;
-  GVAR.bot = bot;
+  singleton.client = client;
+  singleton.bot = bot;
 
   if (_.isUndefined(DEEPL_API_KEY)) {
     timedLog("info: translator not available.");
   } else {
-    GVAR.translator = new DeeplTranslator(
+    singleton.translator = new DeeplTranslator(
       DEEPL_API_KEY,
       DEEPL_MAX_RETRY,
       DEEPL_RETRY_AFTER
@@ -98,18 +99,18 @@ async function main() {
   await ictrl.set(async () => {
     try {
       await loop();
-      if (GVAR.errcnt_mainloop > 0) {
-        GVAR.errcnt_mainloop = 0;
-        bot.dbg({
+      if (singleton.errcnt_mainloop > 0) {
+        singleton.errcnt_mainloop = 0;
+        await bot.dbg({
           content: `Bot recovered from error.`
         });
       }
     } catch (e) {
-      GVAR.errcnt_mainloop += 1;
+      singleton.errcnt_mainloop += 1;
 
-      await bot.catch(e, `Bot errored ${GVAR.errcnt_mainloop}`);
+      await bot.catch(e, `Bot errored ${singleton.errcnt_mainloop}`);
 
-      if (GVAR.errcnt_mainloop >= BSKY_MAX_RETRY) {
+      if (singleton.errcnt_mainloop >= BSKY_MAX_RETRY) {
         throw new Error(`Error count exceeded MAX_RETRY: ${BSKY_MAX_RETRY}.`)
       }
     }

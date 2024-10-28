@@ -1,8 +1,22 @@
-export const GVAR = {
+import _ from "lodash";
+
+export const singleton = {
   client: null,
   bot: null,
   translator: null,
-  errcnt_mainloop: 0
+  errcnt_mainloop: 0,
+
+  has_translator() {
+    return !_.isNull(this.translator);
+  },
+
+  async assert(...args) {
+    return await this.bot.assert(...args);
+  },
+
+  async catch(...args) {
+    return await this.bot.catch(...args);
+  }
 }
 
 export function getTimestamp() {

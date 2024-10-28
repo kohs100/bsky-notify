@@ -1,6 +1,6 @@
 import _ from "lodash";
 
-import { Client, EmbedBuilder } from "discord.js";
+import { Client, EmbedBuilder, Events } from "discord.js";
 
 import { getTimestamp, timedLog, waitFor } from "./base.js";
 
@@ -43,6 +43,14 @@ export default class DiscordBot {
         timedLog("Failed to fetch debug channel:", e);
       }
     }
+
+    this.client.on(Events.InteractionCreate, async i => {
+      timedLog("Got interaction", i);
+      if (!i.isChatInputCommand()) return;
+
+      timedLog("Got command", i.commandName);
+      await i.reply({ content: `You called ${i.commandName}!`, ephemeral: true });
+    })
   }
 
   async send(msg, opts) {

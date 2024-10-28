@@ -1,6 +1,6 @@
 import * as deepl from 'deepl-node';
 
-import { GVAR, waitFor } from './base.js';
+import { singleton, waitFor } from './base.js';
 
 export default class DeeplTranslator {
   constructor(api_key, max_retry, retry_after) {
@@ -15,7 +15,7 @@ export default class DeeplTranslator {
         const result = await this.translator.translateText(text, null, 'ko');
         return result.text;
       } catch (e) {
-        await GVAR.bot.catch(e, `Translation failure ${i} for ${text}`);
+        await singleton.catch(e, `Translation failure ${i} for ${text}`);
         await waitFor(this.retry_after);
       }
     }
