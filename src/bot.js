@@ -23,6 +23,8 @@ function fromError(err) {
 }
 
 export default class DiscordBot {
+  #commands = {};
+
   constructor(max_retry, retry_after) {
     this.max_retry = max_retry;
     this.retry_after = retry_after;
@@ -47,10 +49,33 @@ export default class DiscordBot {
     this.client.on(Events.InteractionCreate, async i => {
       timedLog("Got interaction", i);
       if (!i.isChatInputCommand()) return;
-
       timedLog("Got command", i.commandName);
-      await i.reply({ content: `You called ${i.commandName}!`, ephemeral: true });
-    })
+      for (const [comm, cb] of Object.entries(this.#commands)) {
+        if (comm === i.commandName) {
+          await cb(i);
+          return;
+        }
+      }
+      await this.#commands[null](i);
+    });
+  }
+
+  register(comm, callback) {
+    this.assert(
+      _.isUndefined(this.#commands[comm]),
+      `Duplicated callback comm: ${comm}`
+    );
+
+    this.#commands[comm] = callback;
+  }
+
+  unregister(comm) {
+    this.assert(
+      !_.isUndefined(this.#commands[comm]),
+      `Invalid callback comm: ${comm}`
+    );
+
+    delete this.#commands[comm];
   }
 
   async send(msg, opts) {
@@ -66,29 +91,32 @@ export default class DiscordBot {
     return await this.channel.send(msg, opts);
   }
 
-  async debug(msg, opts) {
+  debug(msg, opts) {
     if (!_.isUndefined(this._dbgch)) {
-      return await this._dbgch.send(msg, opts);
+      this._dbgch.send(msg, opts)
+        .then(_msg => {
+          timedLog("Debug message sent.");
+        }).catch(e => {
+          timedLog(`Debug message send failed: e`);
+        });
     }
   }
 
-  async catch(err, msg) {
-    return await this.debug({
+  catch(err, msg) {
+    this.debug({
       content: `Exception at ${getTimestamp()} with: ${msg}`,
       embeds: fromError(err)
     });
   }
 
-  async assert(condition, msg) {
+  assert(condition, msg) {
     if (!condition) {
-      try {
-        throw new Error(msg);
-      } catch (e) {
-        return await this.debug({
-          content: `Assertion failed at ${getTimestamp()}`,
-          embeds: fromError(e)
-        });
-      }
+      const err = new Error(`Assertion failed: ${msg}`);
+      this.debug({
+        content: `Assertion failed at ${getTimestamp()} with: ${msg}`,
+        embeds: fromError(err)
+      });
+      throw err;
     }
   }
 }

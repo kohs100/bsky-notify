@@ -2,7 +2,7 @@ import _ from 'lodash';
 
 import 'dotenv/config';
 
-import { timedLog, AsyncIntervalCtrl, getTimestamp, singleton, GCStorage } from './base.js';
+import { timedLog, getTimestamp, singleton, GCStorage, waitFor } from './base.js';
 
 import DeeplTranslator from './deepl.js';
 import BskyClient from './bluesky.js';
@@ -15,6 +15,7 @@ const BSKY_PASS = process.env.BSKY_PASS;
 const BSKY_SESS = process.env.BSKY_SESS;
 const BSKY_FETCH_RATE = process.env.BSKY_FETCH_RATE;
 const BSKY_MAX_RETRY = process.env.BSKY_MAX_RETRY;
+const BSKY_FETCH_WINDOW = process.env.BSKY_FETCH_WINDOW;
 
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 const DISCORD_CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
@@ -28,53 +29,103 @@ const DEEPL_API_KEY = process.env.DEEPL_API_KEY;
 const DEEPL_MAX_RETRY = process.env.DEEPL_MAX_RETRY;
 const DEEPL_RETRY_AFTER = process.env.DEEPL_RETRY_AFTER;
 
-async function loop() {
-  timedLog("Start fetching new feeds...");
-  const feeds = await singleton.client.getNew(50);
+class BskyFetcher {
+  #date_last = new Date();
+  #error_cnt = 0;
+  #running = false;
+  get running() { return this.#running; };
 
-  timedLog(`Unseed feeds before filtering: ${feeds.length}`);
+  async #inner(date_from, date_to) {
+    timedLog("Start fetching new feeds...");
+    const feeds = await singleton.client.getFeeds(date_from, date_to, BSKY_FETCH_WINDOW);
 
-  const filtered = feeds.filter(feed => {
-    if (Object.hasOwn(feed, 'reply')) {
-      // Ignore reply
-      return false;
-    } else if (Object.hasOwn(feed, 'reason')) {
-      // Ignore repost
-      return false;
+    timedLog(`Unseed feeds before filtering: ${feeds.length}`);
+
+    const filtered = feeds.filter(feed => {
+      if (Object.hasOwn(feed, 'reply')) {
+        // Ignore reply
+        return false;
+      } else if (Object.hasOwn(feed, 'reason')) {
+        // Ignore repost
+        return false;
+      }
+      return true;
+    })
+
+    if (_.isEmpty(filtered)) {
+      timedLog("No unseen feeds.");
+      return;
+    } else {
+      const num = filtered.length;
+      timedLog(`Got ${num} new feeds.`);
     }
-    return true;
-  })
 
-  if (_.isEmpty(filtered)) {
-    timedLog("No unseen feeds.");
-    return;
-  } else {
-    const num = filtered.length;
-    timedLog(`Got ${num} new feeds.`);
+    filtered.reverse();
+
+    filtered.forEach((feed, i) => {
+      timedLog(`========== Feed ${i} start ==========`);
+      timedLog(feed);
+      timedLog(`========== Feed ${i} end ==========`);
+    });
+
+    for (const feed of filtered) {
+      const msg = new InteractiveMessage(
+        feed,
+        DISCORD_CTX_LENGTH,
+        imsg => {
+          singleton.msg_store.mark_dead(imsg.uri);
+        });
+      await msg.send();
+      singleton.msg_store.add(msg.uri, msg);
+    }
+    singleton.msg_store.try_gc();
   }
 
-  filtered.reverse();
-
-  filtered.forEach((feed, i) => {
-    timedLog(`========== Feed ${i} start ==========`);
-    timedLog(feed);
-    timedLog(`========== Feed ${i} end ==========`);
-  });
-
-  for (const feed of filtered) {
-    const msg = new InteractiveMessage(
-      feed,
-      DISCORD_CTX_LENGTH,
-      imsg => {
-        singleton.msg_store.mark_dead(imsg.uri);
-      });
-    await msg.send();
-    singleton.msg_store.add(msg.uri, msg);
+  async #wrapped_loop() {
+    while (this.#running) {
+      try {
+        const now = new Date();
+        await this.#inner(this.#date_last, now);
+        // Fetch success without error
+        this.#date_last = now;
+        if (this.#error_cnt > 0) {
+          this.#error_cnt = 0;
+          singleton.bot.debug(`Bot recovered from error.`);
+        }
+      } catch (e) {
+        this.#error_cnt += 1;
+        singleton.bot.catch(e, `Bot errored ${this.#error_cnt}`);
+        if (this.#error_cnt >= BSKY_MAX_RETRY) {
+          throw new Error(`Error count exceeded MAX_RETRY: ${BSKY_MAX_RETRY}.`)
+        }
+      }
+      await waitFor(BSKY_FETCH_RATE);
+    }
   }
-  singleton.msg_store.try_gc();
+
+  start() {
+    singleton.assert(
+      !this.#running,
+      "BskyFetcher already started!!"
+    );
+    timedLog("BskyFetcher started.");
+    this.#running = true;
+    this.#wrapped_loop().finally(() => {
+      this.#running = false;
+    });
+  }
+
+  stop() {
+    singleton.assert(
+      this.#running,
+      "BskyFetcher not started!!"
+    );
+    timedLog("BskyFetcher stopped.");
+    this.#running = false;
+  }
 }
 
-async function main() {
+async function init_singleton() {
   const client = new BskyClient(BSKY_SRV, BSKY_SESS);
   await client.login(BSKY_ID, BSKY_PASS);
 
@@ -100,26 +151,39 @@ async function main() {
     timedLog("info: translator initialized.");
   }
 
-  await bot.debug(`Bot started at ${getTimestamp()}`);
+  bot.debug(`Bot started at ${getTimestamp()}`);
+}
 
-  const ictrl = new AsyncIntervalCtrl();
-  await ictrl.set(async () => {
-    try {
-      await loop();
-      if (singleton.errcnt_mainloop > 0) {
-        singleton.errcnt_mainloop = 0;
-        await bot.debug(`Bot recovered from error.`);
+async function main() {
+  await init_singleton();
+
+  const bskyloop = new BskyFetcher();
+  bskyloop.start();
+
+  singleton.bot.register('ping', async i => {
+    await i.reply({ content: `You called ${i.commandName}!`, ephemeral: true });
+  });
+
+  singleton.bot.register('bluesky', async i => {
+    if (i.options.getSubcommand() === 'start') {
+      if (bskyloop.running) {
+        await i.reply({ content: "Bsky already started!", ephemeral: true });
+      } else {
+        bskyloop.start();
+        await i.reply({ content: "Bsky service started.", ephemeral: true });
       }
-    } catch (e) {
-      singleton.errcnt_mainloop += 1;
-
-      await bot.catch(e, `Bot errored ${singleton.errcnt_mainloop}`);
-
-      if (singleton.errcnt_mainloop >= BSKY_MAX_RETRY) {
-        throw new Error(`Error count exceeded MAX_RETRY: ${BSKY_MAX_RETRY}.`)
+    } else if (i.options.getSubcommand() === 'stop') {
+      if (bskyloop.running) {
+        bskyloop.stop();
+        await i.reply({ content: "Bsky service stopped.", ephemeral: true });
+      } else {
+        await i.reply({ content: "Bsky already stopped!", ephemeral: true });
       }
     }
-  }, BSKY_FETCH_RATE);
+  })
+  singleton.bot.register(null, async i => {
+    await i.reply({ content: `Unhandled command: ${i.commandName}`, ephemeral: true });
+  })
 }
 
 main().then(res => {

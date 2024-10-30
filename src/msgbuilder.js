@@ -112,7 +112,7 @@ export default class InteractiveMessage {
   }
 
   async _like() {
-    await singleton.bot.assert(
+    singleton.bot.assert(
       !this.liked,
       `Already defined uri_like for post ${this.uri}`
     );
@@ -126,7 +126,7 @@ export default class InteractiveMessage {
   }
 
   async _repost() {
-    await singleton.bot.assert(
+    singleton.bot.assert(
       !this.reposted,
       `Already defined uri_repost for post ${this.uri}`
     );
@@ -140,7 +140,7 @@ export default class InteractiveMessage {
   }
 
   async _unlike() {
-    await singleton.bot.assert(
+    singleton.bot.assert(
       this.liked,
       `No uri_like for post ${this.uri}`
     );
@@ -150,7 +150,7 @@ export default class InteractiveMessage {
   }
 
   async _unrepost() {
-    await singleton.bot.assert(
+    singleton.bot.assert(
       this.reposted,
       `No uri_repost for post ${this.uri}`
     );
@@ -173,12 +173,12 @@ export default class InteractiveMessage {
     collector.on('end', async (collected, reason) => {
       this.#alive = false;
       try {
+        this.#callback();
         timedLog(`collector end: reason: ${reason}`);
         await msg.edit({ components: [] });
       } catch (e) {
-        await singleton.catch(e, `MsgComponentCollector event failed: end: ${reason}.`);
+        singleton.catch(e, `MsgComponentCollector event failed: end: ${reason}.`);
       }
-      this.#callback();
     })
 
     collector.on('collect', async i => {
@@ -186,7 +186,7 @@ export default class InteractiveMessage {
 
       if (tokens[0] != 'btn') {
         timedLog(i);
-        await singleton.debug(`Invalid customId: ${i.customId}`);
+        singleton.debug(`Invalid customId: ${i.customId}`);
         // Exit without completing interaction
         return;
       };
@@ -204,7 +204,7 @@ export default class InteractiveMessage {
             await this._repost();
         } else {
           timedLog(i);
-          await singleton.debug(`Invalid bsky button name: ${i.customId}`);
+          singleton.debug(`Invalid bsky button name: ${i.customId}`);
           // Exit without completing interaction
           return;
         }
@@ -213,8 +213,8 @@ export default class InteractiveMessage {
           components: [this.buildRow()]
         });
       } else if (tokens[1] == 'trans') {
-        await singleton.bot.assert(!this.translated, "Already translated");
-        await singleton.bot.assert(singleton.has_translator(), "Translator not initialized");
+        singleton.bot.assert(!this.translated, "Already translated");
+        singleton.bot.assert(singleton.has_translator(), "Translator not initialized");
 
         const embeds = [];
         for (const rembed of i.message.embeds) {
@@ -238,7 +238,7 @@ export default class InteractiveMessage {
 
       } else {
         timedLog(i);
-        await singleton.debug(`Invalid button name: ${i.customId}`);
+        singleton.debug(`Invalid button name: ${i.customId}`);
         // Exit without completing interaction
       }
     });

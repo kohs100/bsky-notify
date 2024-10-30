@@ -13,7 +13,19 @@ export const COMMANDS = [
   new SlashCommandBuilder()
     .setName('test')
     .setDescription('Replies with test!')
-    .toJSON()
+    .toJSON(),
+  new SlashCommandBuilder()
+    .setName('bluesky')
+    .setDescription('Bluesky notification service')
+    .addSubcommand(sc =>
+      sc.setName('start')
+        .setDescription('Start bluesky service')
+    )
+    .addSubcommand(sc =>
+      sc.setName('stop')
+        .setDescription('Stop bluesky service')
+    )
+    .toJSON(),
 ]
 
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;

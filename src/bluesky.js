@@ -65,8 +65,6 @@ function sortFeeds(feeds) {
 export default class BskyClient {
   constructor(server, sess_path) {
     this.sess_path = sess_path;
-
-    this.latest = new Date();
     this.agent = new AtpAgent({
       service: server,
       persistSession: (evt, sess) => {
@@ -91,7 +89,7 @@ export default class BskyClient {
     }
   }
 
-  async getRecents(limit) {
+  async getFeeds(date_from, date_to, limit) {
     const { data } = await this.agent.getTimeline({
       limit: limit
     });
@@ -100,21 +98,8 @@ export default class BskyClient {
       cursor: nextPage
     } = data;
 
-    return sortFeeds(feeds);
-  }
-
-  async getNew(limit, olddate) {
-    if (!_.isUndefined(olddate)) {
-      if (olddate < this.latest) {
-        timedLog(`Resetting latest timestamp to ${olddate}`);
-        this.latest = olddate;
-      }
-    }
-
-    const feeds = await this.getRecents(limit);
-    const unseen = feeds.filter(feed => this.latest < feed.sortAt);
-    this.latest = feeds[0].sortAt;
-
+    const unseen = sortFeeds(feeds)
+      .filter(feed => date_from < feed.sortAt && feed.sortAt < date_to);
     return unseen;
   }
 }

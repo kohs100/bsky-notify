@@ -15,7 +15,7 @@ export default class DeeplTranslator {
         const result = await this.translator.translateText(text, null, 'ko');
         return result.text;
       } catch (e) {
-        await singleton.catch(e, `Translation failure ${i} for ${text}`);
+        singleton.catch(e, `Translation failure ${i} for ${text}`);
         await waitFor(this.retry_after);
       }
     }
