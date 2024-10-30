@@ -2,7 +2,7 @@ import _ from 'lodash';
 
 import 'dotenv/config';
 
-import { timedLog, AsyncIntervalCtrl, getTimestamp, singleton } from './base.js';
+import { timedLog, AsyncIntervalCtrl, getTimestamp, singleton, GCStorage } from './base.js';
 
 import DeeplTranslator from './deepl.js';
 import BskyClient from './bluesky.js';
@@ -15,7 +15,6 @@ const BSKY_PASS = process.env.BSKY_PASS;
 const BSKY_SESS = process.env.BSKY_SESS;
 const BSKY_FETCH_RATE = process.env.BSKY_FETCH_RATE;
 const BSKY_MAX_RETRY = process.env.BSKY_MAX_RETRY;
-const BSKY_RETRY_AFTER = process.env.BSKY_RETRY_AFTER;
 
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 const DISCORD_CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
@@ -63,9 +62,16 @@ async function loop() {
   });
 
   for (const feed of filtered) {
-    const msg = new InteractiveMessage(feed, DISCORD_CTX_LENGTH);
+    const msg = new InteractiveMessage(
+      feed,
+      DISCORD_CTX_LENGTH,
+      imsg => {
+        singleton.msg_store.mark_dead(imsg.uri);
+      });
     await msg.send();
+    singleton.msg_store.add(msg.uri, msg);
   }
+  singleton.msg_store.try_gc();
 }
 
 async function main() {
@@ -81,6 +87,7 @@ async function main() {
 
   singleton.client = client;
   singleton.bot = bot;
+  singleton.msg_store = new GCStorage();
 
   if (_.isUndefined(DEEPL_API_KEY)) {
     timedLog("info: translator not available.");
@@ -93,7 +100,7 @@ async function main() {
     timedLog("info: translator initialized.");
   }
 
-  await bot.dbg(`Bot started at ${getTimestamp()}`);
+  await bot.debug(`Bot started at ${getTimestamp()}`);
 
   const ictrl = new AsyncIntervalCtrl();
   await ictrl.set(async () => {
@@ -101,9 +108,7 @@ async function main() {
       await loop();
       if (singleton.errcnt_mainloop > 0) {
         singleton.errcnt_mainloop = 0;
-        await bot.dbg({
-          content: `Bot recovered from error.`
-        });
+        await bot.debug(`Bot recovered from error.`);
       }
     } catch (e) {
       singleton.errcnt_mainloop += 1;

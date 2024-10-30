@@ -66,14 +66,14 @@ export default class DiscordBot {
     return await this.channel.send(msg, opts);
   }
 
-  async dbg(msg, opts) {
+  async debug(msg, opts) {
     if (!_.isUndefined(this._dbgch)) {
       return await this._dbgch.send(msg, opts);
     }
   }
 
   async catch(err, msg) {
-    return await this.dbg({
+    return await this.debug({
       content: `Exception at ${getTimestamp()} with: ${msg}`,
       embeds: fromError(err)
     });
@@ -84,7 +84,7 @@ export default class DiscordBot {
       try {
         throw new Error(msg);
       } catch (e) {
-        return await this.dbg({
+        return await this.debug({
           content: `Assertion failed at ${getTimestamp()}`,
           embeds: fromError(e)
         });

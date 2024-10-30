@@ -5,28 +5,42 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, EmbedBuild
 import { singleton, timedLog } from './base.js';
 
 export default class InteractiveMessage {
-  constructor(feed, lifetime) {
-    this.feed = feed;
-    this.lifetime = lifetime;
+  // Private members
+  #feed = null;
+  #lifetime = null;
+  #callback = null;
 
-    this.uri_like = null;
-    this.uri_repost = null;
+  #uri_like = null;
+  #uri_repost = null;
+  #alive = true;
+  #translated = false;
 
-    this.translated = false;
+  // Public read-only members
+  get uri() { return this.#feed.post.uri; };
+  get cid() { return this.#feed.post.cid; };
+  get liked() {
+    return !_.isNull(this.#uri_like);
+  }
+  get reposted() {
+    return !_.isNull(this.#uri_repost);
+  }
+  get translated() {
+    return this.#translated;
+  }
+  get alive() {
+    return this.#alive;
   }
 
-  is_liked() {
-    return !_.isNull(this.uri_like);
-  }
-
-  is_reposted() {
-    return !_.isNull(this.uri_repost);
+  constructor(feed, lifetime, callback) {
+    this.#feed = feed;
+    this.#lifetime = lifetime;
+    this.#callback = callback;
   }
 
   buildEmbed() {
     const new_embed = new EmbedBuilder();
 
-    const post = this.feed.post;
+    const post = this.#feed.post;
 
     const author = post.author;
     const author_hndl = author.handle;
@@ -50,8 +64,7 @@ export default class InteractiveMessage {
       }
     }
 
-    const uri = post.uri;
-    const uris = uri.split('/');
+    const uris = this.uri.split('/');
     if (uris[3] == 'app.bsky.feed.post') {
       const pid = uris[4];
       const url = `https://bsky.app/profile/${author_hndl}/post/${pid}`
@@ -75,14 +88,14 @@ export default class InteractiveMessage {
       .setCustomId(`btn-bsky-like`)
       .setLabel('Like')
       .setEmoji('❤')
-      .setStyle(this.is_liked() ? ButtonStyle.Danger : ButtonStyle.Secondary);
+      .setStyle(this.liked ? ButtonStyle.Danger : ButtonStyle.Secondary);
     row.addComponents(btnLike);
 
     const btnRepost = new ButtonBuilder()
       .setCustomId(`btn-bsky-repost`)
       .setLabel('Repost')
       .setEmoji('♻')
-      .setStyle(this.is_reposted() ? ButtonStyle.Success : ButtonStyle.Secondary);
+      .setStyle(this.reposted ? ButtonStyle.Success : ButtonStyle.Secondary);
     row.addComponents(btnRepost);
 
     if (singleton.has_translator()) {
@@ -99,55 +112,51 @@ export default class InteractiveMessage {
   }
 
   async _like() {
-    const uri = this.feed.post.uri;
-    const cid = this.feed.post.cid;
-
     await singleton.bot.assert(
-      _.isNull(this.uri_like),
-      `Already defined uri_like for post ${uri}`
+      !this.liked,
+      `Already defined uri_like for post ${this.uri}`
     );
 
-    const { uri: uri_like } = await singleton.client.agent.like(uri, cid);
-    this.uri_like = uri_like
-  }
-
-  async _unlike() {
-    const uri = this.feed.post.uri;
-    const uri_like = this.uri_like;
-
-    await singleton.bot.assert(
-      !_.isNull(this.uri_like),
-      `No uri_like for post ${uri}`
+    const {
+      uri: uri_like
+    } = await singleton.client.agent.like(
+      this.uri, this.cid
     );
-
-    await singleton.client.agent.deleteLike(uri_like);
-    this.uri_like = null;
+    this.#uri_like = uri_like
   }
 
   async _repost() {
-    const uri = this.feed.post.uri;
-    const cid = this.feed.post.cid;
-
     await singleton.bot.assert(
-      _.isNull(this.uri_repost),
-      `Already defined uri_repost for post ${uri}`
+      !this.reposted,
+      `Already defined uri_repost for post ${this.uri}`
     );
 
-    const { uri: uri_repost } = await singleton.client.agent.repost(uri, cid);
-    this.uri_repost = uri_repost
+    const {
+      uri: uri_repost
+    } = await singleton.client.agent.repost(
+      this.uri, this.cid
+    );
+    this.#uri_repost = uri_repost
+  }
+
+  async _unlike() {
+    await singleton.bot.assert(
+      this.liked,
+      `No uri_like for post ${this.uri}`
+    );
+
+    await singleton.client.agent.deleteLike(this.#uri_like);
+    this.#uri_like = null;
   }
 
   async _unrepost() {
-    const uri = this.feed.post.uri;
-    const uri_repost = this.uri_repost;
-
     await singleton.bot.assert(
-      !_.isNull(this.uri_repost),
-      `No uri_repost for post ${uri}`
+      this.reposted,
+      `No uri_repost for post ${this.uri}`
     );
 
-    await singleton.client.agent.deleteRepost(uri_repost);
-    this.uri_repost = null;
+    await singleton.client.agent.deleteRepost(this.#uri_repost);
+    this.#uri_repost = null;
   }
 
   async send() {
@@ -158,17 +167,18 @@ export default class InteractiveMessage {
 
     const collector = msg.createMessageComponentCollector({
       componentType: ComponentType.Button,
-      time: this.lifetime,
-      // time: 20_000,
+      time: this.#lifetime,
     });
 
     collector.on('end', async (collected, reason) => {
+      this.#alive = false;
       try {
         timedLog(`collector end: reason: ${reason}`);
         await msg.edit({ components: [] });
       } catch (e) {
         await singleton.catch(e, `MsgComponentCollector event failed: end: ${reason}.`);
       }
+      this.#callback();
     })
 
     collector.on('collect', async i => {
@@ -176,25 +186,25 @@ export default class InteractiveMessage {
 
       if (tokens[0] != 'btn') {
         timedLog(i);
-        await singleton.bot.dbg(`Invalid customId: ${i.customId}`);
+        await singleton.debug(`Invalid customId: ${i.customId}`);
         // Exit without completing interaction
         return;
       };
 
       if (tokens[1] == 'bsky') {
         if (tokens[2] == 'like') {
-          if (this.is_liked())
+          if (this.liked)
             await this._unlike();
           else
             await this._like();
         } else if (tokens[2] == 'repost') {
-          if (this.is_reposted())
+          if (this.reposted)
             await this._unrepost();
           else
             await this._repost();
         } else {
           timedLog(i);
-          await singleton.bot.dbg(`Invalid bsky button name: ${i.customId}`);
+          await singleton.debug(`Invalid bsky button name: ${i.customId}`);
           // Exit without completing interaction
           return;
         }
@@ -220,7 +230,7 @@ export default class InteractiveMessage {
           embeds.push(embed);
         }
 
-        this.translated = true;
+        this.#translated = true;
         await i.update({
           embeds: embeds,
           components: [this.buildRow()]
@@ -228,7 +238,7 @@ export default class InteractiveMessage {
 
       } else {
         timedLog(i);
-        await singleton.bot.dbg(`Invalid button name: ${i.customId}`);
+        await singleton.debug(`Invalid button name: ${i.customId}`);
         // Exit without completing interaction
       }
     });

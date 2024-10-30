@@ -4,6 +4,7 @@ export const singleton = {
   client: null,
   bot: null,
   translator: null,
+  msg_store: null,
   errcnt_mainloop: 0,
 
   has_translator() {
@@ -16,14 +17,20 @@ export const singleton = {
 
   async catch(...args) {
     return await this.bot.catch(...args);
+  },
+
+  async debug(...args) {
+    return await this.bot.debug(...args);
   }
 }
 
 export function getTimestamp() {
-  const now = new Date().toISOString()
+  const utc_now = new Date();
+  const ofs = utc_now.getTimezoneOffset() * 60000;
+  const jst_now = new Date(utc_now - ofs);
+  return jst_now.toISOString()
     .replace(/T/, ' ')
     .replace(/\..+/, '');
-  return now;
 }
 
 export function timedLog(...args) {
@@ -73,5 +80,49 @@ export class AsyncIntervalCtrl {
   async clear(iid) {
     if (this.running[iid])
       this.running[iid] = false;
+  }
+}
+
+export class GCStorage {
+  need_gc = false;
+  storage = {};
+
+  add(key, value) {
+    singleton.assert(
+      _.isUndefined(this.storage[key]),
+      `Duplicated value for key ${key}`
+    );
+    this.storage[key] = {
+      alive: true,
+      value: value,
+    };
+  }
+
+  get(key) {
+    return this.storage[key];
+  }
+
+  mark_dead(key) {
+    singleton.assert(
+      !_.isUndefined(this.storage[uri]),
+      `Trying to mark with invalid key ${key}`
+    );
+    this.storage[key].alive = false;
+    this.need_gc = true;
+  }
+
+  try_gc() {
+    if (this.need_gc) {
+      this.need_gc = false;
+      const victims = [];
+      for (const [key, aval] of Object.entries(this.storage)) {
+        const { alive: alive } = aval;
+        if (!alive) victims.push(key);
+      }
+      for (const key of victims) {
+        delete this.storage[key];
+      }
+      singleton.debug(`Evicted ${victims}`);
+    }
   }
 }
