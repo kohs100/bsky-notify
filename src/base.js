@@ -6,7 +6,7 @@ export const singleton = {
   translator: null,
   msg_store: null,
 
-  has_translator() {
+  get has_translator() {
     return !_.isNull(this.translator);
   },
 

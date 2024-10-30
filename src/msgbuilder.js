@@ -98,7 +98,7 @@ export default class InteractiveMessage {
       .setStyle(this.reposted ? ButtonStyle.Success : ButtonStyle.Secondary);
     row.addComponents(btnRepost);
 
-    if (singleton.has_translator()) {
+    if (singleton.has_translator) {
       if (!this.translated) {
         const btnTranslate = new ButtonBuilder()
           .setCustomId(`btn-trans-deepl`)
@@ -112,7 +112,7 @@ export default class InteractiveMessage {
   }
 
   async _like() {
-    singleton.bot.assert(
+    singleton.assert(
       !this.liked,
       `Already defined uri_like for post ${this.uri}`
     );
@@ -126,7 +126,7 @@ export default class InteractiveMessage {
   }
 
   async _repost() {
-    singleton.bot.assert(
+    singleton.assert(
       !this.reposted,
       `Already defined uri_repost for post ${this.uri}`
     );
@@ -140,7 +140,7 @@ export default class InteractiveMessage {
   }
 
   async _unlike() {
-    singleton.bot.assert(
+    singleton.assert(
       this.liked,
       `No uri_like for post ${this.uri}`
     );
@@ -150,7 +150,7 @@ export default class InteractiveMessage {
   }
 
   async _unrepost() {
-    singleton.bot.assert(
+    singleton.assert(
       this.reposted,
       `No uri_repost for post ${this.uri}`
     );
@@ -213,8 +213,8 @@ export default class InteractiveMessage {
           components: [this.buildRow()]
         });
       } else if (tokens[1] == 'trans') {
-        singleton.bot.assert(!this.translated, "Already translated");
-        singleton.bot.assert(singleton.has_translator(), "Translator not initialized");
+        singleton.assert(!this.translated, "Already translated");
+        singleton.assert(singleton.has_translator, "Translator not initialized");
 
         const embeds = [];
         for (const rembed of i.message.embeds) {

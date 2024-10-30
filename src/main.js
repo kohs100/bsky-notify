@@ -90,11 +90,11 @@ class BskyFetcher {
         this.#date_last = now;
         if (this.#error_cnt > 0) {
           this.#error_cnt = 0;
-          singleton.bot.debug(`Bot recovered from error.`);
+          singleton.debug(`Bot recovered from error.`);
         }
       } catch (e) {
         this.#error_cnt += 1;
-        singleton.bot.catch(e, `Bot errored ${this.#error_cnt}`);
+        singleton.catch(e, `Bot errored ${this.#error_cnt}`);
         if (this.#error_cnt >= BSKY_MAX_RETRY) {
           throw new Error(`Error count exceeded MAX_RETRY: ${BSKY_MAX_RETRY}.`)
         }
@@ -110,9 +110,11 @@ class BskyFetcher {
     );
     timedLog("BskyFetcher started.");
     this.#running = true;
-    this.#wrapped_loop().finally(() => {
-      this.#running = false;
-    });
+    this.#wrapped_loop()
+      .catch(e => singleton.catch(e, "BskyFetcher loop failed!"))
+      .finally(() => {
+        this.#running = false;
+      });
   }
 
   stop() {
