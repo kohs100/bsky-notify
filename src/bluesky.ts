@@ -1,10 +1,13 @@
-import _ from 'lodash';
+import _ from "lodash";
 
-import { readFileSync, existsSync, writeFileSync } from 'node:fs';
-import { AtpAgent, AppBskyFeedPost } from '@atproto/api'
-import { FeedViewPost, isReasonRepost } from '@atproto/api/dist/client/types/app/bsky/feed/defs.js';
+import { readFileSync, existsSync, writeFileSync } from "node:fs";
+import { AtpAgent, AppBskyFeedPost } from "@atproto/api";
+import {
+  FeedViewPost,
+  isReasonRepost,
+} from "@atproto/api/dist/client/types/app/bsky/feed/defs.js";
 
-import { AugmentedFeed, timedLog } from './base.js';
+import { AugmentedFeed, timedLog } from "./base.js";
 
 function getSortDate(feed: FeedViewPost): Date | null {
   if (feed.reason === undefined) {
@@ -16,7 +19,6 @@ function getSortDate(feed: FeedViewPost): Date | null {
       const now = new Date();
       return now < ctime ? itime : ctime;
     }
-
   } else {
     const reason = feed.reason;
     if (isReasonRepost(reason)) {
@@ -29,18 +31,21 @@ function getSortDate(feed: FeedViewPost): Date | null {
 }
 
 function sortFeeds(feeds: FeedViewPost[]) {
-  const filtered: AugmentedFeed[] = feeds.reduce((acc: AugmentedFeed[], feed: FeedViewPost) => {
-    const stime = getSortDate(feed);
-    if (_.isNull(stime)) {
-      timedLog(`Info: null sortdate detected. skipping...\n${feed}`);
-    } else {
-      acc.push({
-        feed: feed,
-        sortAt: stime
-      });
-    }
-    return acc;
-  }, []);
+  const filtered: AugmentedFeed[] = feeds.reduce(
+    (acc: AugmentedFeed[], feed: FeedViewPost) => {
+      const stime = getSortDate(feed);
+      if (_.isNull(stime)) {
+        timedLog(`Info: null sortdate detected. skipping...\n${feed}`);
+      } else {
+        acc.push({
+          feed: feed,
+          sortAt: stime,
+        });
+      }
+      return acc;
+    },
+    []
+  );
 
   const sorted = filtered.toSorted((f1: AugmentedFeed, f2: AugmentedFeed) => {
     const t1 = f1.sortAt.getTime();
@@ -68,7 +73,9 @@ export default class BskyClient {
   private sess_path: string;
   private _agent: AtpAgent;
 
-  get agent() { return this._agent; }
+  get agent() {
+    return this._agent;
+  }
 
   constructor(server: string, sess_path: string) {
     this.sess_path = sess_path;
@@ -77,7 +84,7 @@ export default class BskyClient {
       persistSession: (evt, sess) => {
         timedLog(`persistSession: ${evt}`);
         writeFileSync(this.sess_path, JSON.stringify(sess));
-      }
+      },
     });
   }
 
@@ -91,22 +98,24 @@ export default class BskyClient {
       timedLog(`Logging in with [${id}] ...`);
       await this.agent.login({
         identifier: id,
-        password: passwd
+        password: passwd,
       });
     }
   }
 
-  async getFeeds(date_from: Date, date_to: Date, limit: number): Promise<AugmentedFeed[]> {
+  async getFeeds(
+    date_from: Date,
+    date_to: Date,
+    limit: number
+  ): Promise<AugmentedFeed[]> {
     const { data } = await this.agent.getTimeline({
-      limit: limit
+      limit: limit,
     });
-    const {
-      feed: feeds,
-      cursor: nextPage
-    } = data;
+    const { feed: feeds, cursor: nextPage } = data;
 
-    const unseen = sortFeeds(feeds)
-      .filter(feed => date_from < feed.sortAt && feed.sortAt < date_to);
+    const unseen = sortFeeds(feeds).filter(
+      (feed) => date_from < feed.sortAt && feed.sortAt < date_to
+    );
     return unseen;
   }
 }

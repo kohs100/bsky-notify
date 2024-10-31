@@ -1,6 +1,6 @@
-import * as deepl from 'deepl-node';
+import * as deepl from "deepl-node";
 
-import { singleton, waitFor, TranslatorInterface } from './base.js';
+import { singleton, waitFor, TranslatorInterface } from "./base.js";
 
 export default class DeeplTranslator implements TranslatorInterface {
   private max_retry: number;
@@ -16,14 +16,14 @@ export default class DeeplTranslator implements TranslatorInterface {
   async translate(text: string): Promise<string> {
     for (let i = 0; i < this.max_retry; i++) {
       try {
-        const result = await this.translator.translateText(text, null, 'ko');
+        const result = await this.translator.translateText(text, null, "ko");
         return result.text;
       } catch (e) {
         singleton.catch(e, `Translation failure ${i} for ${text}`);
         await waitFor(this.retry_after);
       }
     }
-    const result = await this.translator.translateText(text, null, 'ko');
+    const result = await this.translator.translateText(text, null, "ko");
     return result.text;
   }
 }

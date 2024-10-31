@@ -8,7 +8,7 @@ import {
   Events,
   Message,
   MessageCreateOptions,
-  TextChannel
+  TextChannel,
 } from "discord.js";
 
 import {
@@ -47,7 +47,9 @@ function fromError(err: Error) {
   return [msg_embed, stk_embed];
 }
 
-export default class DiscordBot implements DebugInterface, SendInterface, ListenInterface {
+export default class DiscordBot
+  implements DebugInterface, SendInterface, ListenInterface
+{
   private commands: Dictionary<InteractionListener> = {};
   private default_command?: InteractionListener;
 
@@ -62,7 +64,7 @@ export default class DiscordBot implements DebugInterface, SendInterface, Listen
     this.max_retry = max_retry;
     this.retry_after = retry_after;
     this.client = new Client({
-      intents: []
+      intents: [],
     });
   }
 
@@ -90,7 +92,7 @@ export default class DiscordBot implements DebugInterface, SendInterface, Listen
       this.dbgch = await this.fetchChannel(dbgchid);
     }
 
-    this.client.on(Events.InteractionCreate, async i => {
+    this.client.on(Events.InteractionCreate, async (i) => {
       if (!i.isChatInputCommand()) return;
       timedLog(`Got command ${i.commandName}`);
       for (const [comm, cb] of Object.entries(this.commands)) {
@@ -99,8 +101,7 @@ export default class DiscordBot implements DebugInterface, SendInterface, Listen
           return;
         }
       }
-      if (this.default_command !== undefined)
-        await this.default_command(i);
+      if (this.default_command !== undefined) await this.default_command(i);
     });
   }
 
@@ -145,8 +146,7 @@ export default class DiscordBot implements DebugInterface, SendInterface, Listen
       } catch (e) {
         const err: Error = e instanceof Error ? e : new Error(String(e));
         timedLog(err);
-        if (err.stack !== undefined)
-          timedLog(err.stack);
+        if (err.stack !== undefined) timedLog(err.stack);
         await waitFor(this.retry_after);
       }
     }
@@ -155,10 +155,12 @@ export default class DiscordBot implements DebugInterface, SendInterface, Listen
 
   debug(msg: string | MessageCreateOptions) {
     if (!_.isUndefined(this.dbgch)) {
-      this.dbgch.send(msg)
-        .then(_msg => {
+      this.dbgch
+        .send(msg)
+        .then((_msg) => {
           timedLog("Debug message sent.");
-        }).catch(e => {
+        })
+        .catch((e) => {
           timedLog(`Debug message send failed: ${e}`);
         });
     }
@@ -168,7 +170,7 @@ export default class DiscordBot implements DebugInterface, SendInterface, Listen
     const error = toError(err);
     this.debug({
       content: `Exception at ${getTimestamp()} with: ${msg}`,
-      embeds: fromError(error)
+      embeds: fromError(error),
     });
   }
 
@@ -177,7 +179,7 @@ export default class DiscordBot implements DebugInterface, SendInterface, Listen
       const err = new Error(`Assertion failed: ${msg}`);
       this.debug({
         content: `Assertion failed at ${getTimestamp()} with: ${msg}`,
-        embeds: fromError(err)
+        embeds: fromError(err),
       });
       throw err;
     }
