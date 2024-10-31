@@ -75,12 +75,12 @@ class BskyFetcher {
         afeed.feed,
         DISCORD_CTX_LENGTH,
         imsg => {
-          this.msg_store.mark_dead(imsg.uri);
+          // this.msg_store.mark_dead(imsg.uri);
         });
       await msg.send();
-      this.msg_store.add(msg.uri, msg);
+      // this.msg_store.add(msg.uri, msg);
     }
-    this.msg_store.try_gc();
+    // this.msg_store.try_gc();
   }
 
   private async wrapped_loop() {
@@ -112,6 +112,7 @@ class BskyFetcher {
     );
     timedLog("BskyFetcher started.");
     this._running = true;
+    this.error_cnt = 0;
     this.wrapped_loop()
       .catch(e => singleton.catch(e, "BskyFetcher loop failed!"))
       .finally(() => {
