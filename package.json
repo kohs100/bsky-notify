@@ -1,12 +1,13 @@
 {
   "name": "bsky-notify",
   "version": "1.0.0",
-  "main": "main.js",
+  "main": "src/main.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
     "start": "node dist/main.js",
-    "register": "node dist/register.js"
+    "register": "node dist/register.js",
+    "pretty": "npx prettier --write src/"
   },
   "keywords": [],
   "author": "",
@@ -22,5 +23,9 @@
     "lodash": "^4.17.21",
     "typescript": "^5.6.3"
   },
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "knip": "^5.36.0",
+    "prettier": "^3.3.3"
+  }
 }

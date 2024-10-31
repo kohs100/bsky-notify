@@ -3,18 +3,12 @@
     "strict": true,
     "module": "ES6",
     "moduleResolution": "node",
-    "lib": [
-      "ES2023"
-    ],
+    "lib": ["ES2023"],
     "target": "ES5",
     "outDir": "./dist",
     "esModuleInterop": true,
     "skipLibCheck": true
   },
-  "exclude": [
-    "node_modules"
-  ],
-  "include": [
-    "src/**/*"
-  ]
+  "exclude": ["node_modules"],
+  "include": ["src/**/*"]
 }
