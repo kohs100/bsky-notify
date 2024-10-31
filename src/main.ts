@@ -141,19 +141,19 @@ async function init_singleton() {
 
   timedLog("info: bot login success!");
 
-  singleton.client = client;
-  singleton.bot = bot;
-
+  let translator = null;
   if (_.isUndefined(DEEPL_API_KEY)) {
     timedLog("info: translator not available.");
   } else {
-    singleton.translator = new DeeplTranslator(
+    translator = new DeeplTranslator(
       DEEPL_API_KEY,
       DEEPL_MAX_RETRY,
       DEEPL_RETRY_AFTER
     );
     timedLog("info: translator initialized.");
   }
+
+  singleton.initialize(client, bot, translator);
 
   bot.debug(`Bot started at ${getTimestamp()}`);
 }

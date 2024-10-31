@@ -3,6 +3,7 @@ import _ from "lodash";
 import { AtpAgent } from "@atproto/api";
 import { FeedViewPost } from "@atproto/api/dist/client/types/app/bsky/feed/defs";
 import { ChatInputCommandInteraction, Message, MessageCreateOptions } from "discord.js";
+import { assert } from "node:console";
 
 export class GCStorage<T> {
   need_gc: Boolean = false;
@@ -95,37 +96,61 @@ interface _Singleton {
   debug(msg: string | MessageCreateOptions): void,
 };
 
-export const singleton: _Singleton = {
-  client: {
-    getFeeds: (from, to, limit) => { throw Error("Not Initialized") },
-    get agent() { throw Error("Not Initialized"); return {} as AtpAgent }
-  },
-  bot: {
-    assert: (cond) => {
-      if (!cond) throw Error("Not Initialized");
-    },
-    catch: () => { throw Error("Not Initialized"); },
-    debug: () => { throw Error("Not Initialized"); },
-    send: () => { throw Error("Not Initialized"); },
-    register: () => { throw Error("Not Initialized"); },
-    unregister: () => { throw Error("Not Initialized"); }
-  },
-  translator: null,
-  assert(cond: Boolean, msg: string | MessageCreateOptions) {
+export class singleton {
+  private static _client?: BskyInterface;
+  private static _bot?: DebugInterface & SendInterface & ListenInterface;
+  private static _translator?: TranslatorInterface | null;
+
+  private constructor() { }
+
+  static get client(): BskyInterface {
+    if (singleton._client === undefined) {
+      throw new Error("Client is not initialized!!");
+    } else {
+      return singleton._client;
+    }
+  };
+
+  static get bot(): DebugInterface & SendInterface & ListenInterface {
+    if (singleton._bot === undefined) {
+      throw new Error("Client is not initialized!!");
+    } else {
+      return singleton._bot;
+    }
+  };
+
+  static get translator(): TranslatorInterface | null {
+    if (singleton._translator === undefined) {
+      throw new Error("Client is not initialized!!");
+    } else {
+      return singleton._translator;
+    }
+  };
+
+  static initialize(
+    c: BskyInterface,
+    b: DebugInterface & SendInterface & ListenInterface,
+    t: TranslatorInterface | null) {
+    singleton._client = c;
+    singleton._bot = b;
+    singleton._translator = t;
+  }
+
+  static assert(cond: Boolean, msg: string | MessageCreateOptions): asserts cond {
     if (!cond) {
       const err = new Error(`Assertion failed: ${msg}`);
-      this.bot.catch(err, msg);
+      singleton.bot.catch(err, msg);
       throw err;
     }
-  },
+  };
 
-  catch(err: Error, msg: string | MessageCreateOptions) {
-    this.bot.catch(err, msg);
-  },
+  static catch(err: unknown, msg: string | MessageCreateOptions) {
+    singleton.bot.catch(err, msg);
+  };
 
-  debug(msg: string | MessageCreateOptions) {
-    this.bot.debug(msg);
-  }
+  static debug(msg: string | MessageCreateOptions) {
+    singleton.bot.debug(msg);
+  };
 }
 
 export function getTimestamp() {
