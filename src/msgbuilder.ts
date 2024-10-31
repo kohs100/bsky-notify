@@ -1,11 +1,10 @@
 import _ from 'lodash';
 
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, EmbedBuilder } from 'discord.js';
+import { FeedViewPost } from '@atproto/api/dist/client/types/app/bsky/feed/defs';
+import { AppBskyEmbedImages, AppBskyFeedPost } from '@atproto/api';
 
 import { singleton, timedLog } from './base.js';
-import { FeedViewPost } from '@atproto/api/dist/client/types/app/bsky/feed/defs.js';
-import { AppBskyEmbedImages, AppBskyFeedPost } from '@atproto/api';
-import { isImage, isViewImage } from '@atproto/api/dist/client/types/app/bsky/embed/images.js';
 export default class InteractiveMessage {
   // Private members
   private feed: FeedViewPost;
@@ -200,26 +199,31 @@ export default class InteractiveMessage {
       };
 
       if (tokens[1] == 'bsky') {
-        if (tokens[2] == 'like') {
-          if (this.liked)
-            await this._unlike();
-          else
-            await this._like();
-        } else if (tokens[2] == 'repost') {
-          if (this.reposted)
-            await this._unrepost();
-          else
-            await this._repost();
-        } else {
-          timedLog(i);
-          singleton.debug(`Invalid bsky button name: ${i.customId}`);
-          // Exit without completing interaction
-          return;
+        try {
+          if (tokens[2] == 'like') {
+            if (this.liked)
+              await this._unlike();
+            else
+              await this._like();
+          } else if (tokens[2] == 'repost') {
+            if (this.reposted)
+              await this._unrepost();
+            else
+              await this._repost();
+          } else {
+            timedLog(i);
+            singleton.debug(`Invalid bsky button name: ${i.customId}`);
+            // Exit without completing interaction
+            return;
+          }
+
+          await i.update({
+            components: [this.buildRow()]
+          });
+        } catch (e) {
+          singleton.catch(e, "like/repost failed");
         }
 
-        await i.update({
-          components: [this.buildRow()]
-        });
       } else if (tokens[1] == 'trans') {
         singleton.assert(!this.translated, "Already translated");
         singleton.assert(singleton.translator !== null, "Translator not initialized");

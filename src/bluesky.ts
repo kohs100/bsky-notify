@@ -2,9 +2,9 @@ import _ from 'lodash';
 
 import { readFileSync, existsSync, writeFileSync } from 'node:fs';
 import { AtpAgent, AppBskyFeedPost } from '@atproto/api'
+import { FeedViewPost, isReasonRepost } from '@atproto/api/dist/client/types/app/bsky/feed/defs.js';
 
 import { AugmentedFeed, timedLog } from './base.js';
-import { FeedViewPost, isReasonRepost } from '@atproto/api/dist/client/types/app/bsky/feed/defs.js';
 
 function getSortDate(feed: FeedViewPost): Date | null {
   if (feed.reason === undefined) {

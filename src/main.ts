@@ -2,7 +2,7 @@ import _ from 'lodash';
 
 import 'dotenv/config';
 
-import { timedLog, getTimestamp, singleton, GCStorage, waitFor, AugmentedFeed } from './base.js';
+import { timedLog, getTimestamp, singleton, GCStorage, waitFor } from './base.js';
 
 import DeeplTranslator from './deepl.js';
 import BskyClient from './bluesky.js';

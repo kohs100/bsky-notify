@@ -1,7 +1,8 @@
+import _ from "lodash";
+
 import { AtpAgent } from "@atproto/api";
 import { FeedViewPost } from "@atproto/api/dist/client/types/app/bsky/feed/defs";
-import { CacheType, ChatInputCommandInteraction, Message, MessageCreateOptions } from "discord.js";
-import _ from "lodash";
+import { ChatInputCommandInteraction, Message, MessageCreateOptions } from "discord.js";
 
 export class GCStorage<T> {
   need_gc: Boolean = false;
@@ -110,13 +111,12 @@ export const singleton: _Singleton = {
     unregister: () => { throw Error("Not Initialized"); }
   },
   translator: null,
-  assert(cond: Boolean, msg: string | MessageCreateOptions): true {
+  assert(cond: Boolean, msg: string | MessageCreateOptions) {
     if (!cond) {
       const err = new Error(`Assertion failed: ${msg}`);
-      this.catch(err, msg);
+      this.bot.catch(err, msg);
       throw err;
     }
-    return true;
   },
 
   catch(err: Error, msg: string | MessageCreateOptions) {

@@ -1,20 +1,26 @@
-import _, { Dictionary } from "lodash";
+import _ from "lodash";
 
 import {
-  CacheType,
   ChannelType,
   Client,
   DMChannel,
   EmbedBuilder,
   Events,
-  Interaction,
   Message,
   MessageCreateOptions,
   TextChannel
 } from "discord.js";
 
-import { SendInterface, DebugInterface, getTimestamp, timedLog, waitFor, InteractionListener } from "./base.js";
-import { Channel } from "diagnostics_channel";
+import {
+  SendInterface,
+  DebugInterface,
+  ListenInterface,
+  getTimestamp,
+  timedLog,
+  waitFor,
+  InteractionListener,
+  Dictionary,
+} from "./base.js";
 
 function toError(e: unknown): Error {
   return e instanceof Error ? e : new Error(String(e));
@@ -41,7 +47,7 @@ function fromError(err: Error) {
   return [msg_embed, stk_embed];
 }
 
-export default class DiscordBot implements DebugInterface, SendInterface {
+export default class DiscordBot implements DebugInterface, SendInterface, ListenInterface {
   private commands: Dictionary<InteractionListener> = {};
   private default_command?: InteractionListener;
 
@@ -153,7 +159,7 @@ export default class DiscordBot implements DebugInterface, SendInterface {
         .then(_msg => {
           timedLog("Debug message sent.");
         }).catch(e => {
-          timedLog(`Debug message send failed: e`);
+          timedLog(`Debug message send failed: ${e}`);
         });
     }
   }
