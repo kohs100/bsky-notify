@@ -1,7 +1,6 @@
 import _ from "lodash";
 
-import { AtpAgent } from "@atproto/api";
-import { FeedViewPost } from "@atproto/api/dist/client/types/app/bsky/feed/defs";
+import { AppBskyFeedDefs, AtpAgent } from "@atproto/api";
 import {
   ChatInputCommandInteraction,
   Message,
@@ -60,7 +59,7 @@ export type InteractionListener = (
 ) => Promise<void>;
 
 export type AugmentedFeed = {
-  feed: FeedViewPost;
+  feed: AppBskyFeedDefs.FeedViewPost;
   sortAt: Date;
 };
 
@@ -167,5 +166,5 @@ export function timedLog(msg: any) {
 }
 
 export function waitFor(msec: number) {
-  return new Promise((res) => setTimeout(res, msec));
+  return new Promise(res => setTimeout(res, msec));
 }

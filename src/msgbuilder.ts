@@ -7,13 +7,16 @@ import {
   ComponentType,
   EmbedBuilder,
 } from "discord.js";
-import { FeedViewPost } from "@atproto/api/dist/client/types/app/bsky/feed/defs";
-import { AppBskyEmbedImages, AppBskyFeedPost } from "@atproto/api";
+import {
+  AppBskyEmbedImages,
+  AppBskyFeedPost,
+  AppBskyFeedDefs,
+} from "@atproto/api";
 
 import { singleton, timedLog } from "./base.js";
 export default class InteractiveMessage {
   // Private members
-  private feed: FeedViewPost;
+  private feed: AppBskyFeedDefs.FeedViewPost;
   private lifetime: number;
   private callback: (imsg: InteractiveMessage) => void;
 
@@ -44,7 +47,7 @@ export default class InteractiveMessage {
   }
 
   constructor(
-    feed: FeedViewPost,
+    feed: AppBskyFeedDefs.FeedViewPost,
     lifetime: number,
     callback?: (imsg: InteractiveMessage) => void
   ) {
@@ -203,7 +206,7 @@ export default class InteractiveMessage {
       }
     });
 
-    collector.on("collect", async (i) => {
+    collector.on("collect", async i => {
       const tokens = i.customId.split("-");
 
       if (tokens[0] != "btn") {

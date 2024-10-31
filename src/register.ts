@@ -17,10 +17,10 @@ export const COMMANDS = [
   new SlashCommandBuilder()
     .setName("bluesky")
     .setDescription("Bluesky notification service")
-    .addSubcommand((sc) =>
+    .addSubcommand(sc =>
       sc.setName("start").setDescription("Start bluesky service")
     )
-    .addSubcommand((sc) =>
+    .addSubcommand(sc =>
       sc.setName("stop").setDescription("Stop bluesky service")
     )
     .toJSON(),
@@ -41,10 +41,10 @@ async function register() {
 }
 
 register()
-  .then((res) => {
+  .then(res => {
     timedLog(`register done with ${res}`);
   })
-  .catch((e) => {
+  .catch(e => {
     timedLog(`register errored with ${e}`);
   });
 timedLog("register fired.");

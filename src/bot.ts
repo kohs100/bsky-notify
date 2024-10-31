@@ -92,7 +92,7 @@ export default class DiscordBot
       this.dbgch = await this.fetchChannel(dbgchid);
     }
 
-    this.client.on(Events.InteractionCreate, async (i) => {
+    this.client.on(Events.InteractionCreate, async i => {
       if (!i.isChatInputCommand()) return;
       timedLog(`Got command ${i.commandName}`);
       for (const [comm, cb] of Object.entries(this.commands)) {
@@ -157,10 +157,10 @@ export default class DiscordBot
     if (!_.isUndefined(this.dbgch)) {
       this.dbgch
         .send(msg)
-        .then((_msg) => {
+        .then(_msg => {
           timedLog("Debug message sent.");
         })
-        .catch((e) => {
+        .catch(e => {
           timedLog(`Debug message send failed: ${e}`);
         });
     }

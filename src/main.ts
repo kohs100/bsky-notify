@@ -55,7 +55,7 @@ class BskyFetcher {
 
     // timedLog(`Unseed feeds before filtering: ${feeds.length}`);
 
-    const filtered = feeds.filter((feed) => {
+    const filtered = feeds.filter(feed => {
       if (Object.hasOwn(feed, "reply")) {
         // Ignore reply
         return false;
@@ -86,7 +86,7 @@ class BskyFetcher {
       const msg = new InteractiveMessage(
         afeed.feed,
         DISCORD_CTX_LENGTH,
-        (imsg) => {
+        imsg => {
           // this.msg_store.mark_dead(imsg.uri);
         }
       );
@@ -124,7 +124,7 @@ class BskyFetcher {
     this._running = true;
     this.error_cnt = 0;
     this.wrapped_loop()
-      .catch((e) => singleton.catch(e, "BskyFetcher loop failed!"))
+      .catch(e => singleton.catch(e, "BskyFetcher loop failed!"))
       .finally(() => {
         this._running = false;
       });
@@ -171,11 +171,11 @@ async function main() {
   const bskyloop = new BskyFetcher();
   bskyloop.start();
 
-  singleton.bot.register("ping", async (i) => {
+  singleton.bot.register("ping", async i => {
     await i.reply({ content: `You called ${i.commandName}!`, ephemeral: true });
   });
 
-  singleton.bot.register("bluesky", async (i) => {
+  singleton.bot.register("bluesky", async i => {
     if (i.options.getSubcommand() === "start") {
       if (bskyloop.running) {
         await i.reply({ content: "Bsky already started!", ephemeral: true });
@@ -192,7 +192,7 @@ async function main() {
       }
     }
   });
-  singleton.bot.register(null, async (i) => {
+  singleton.bot.register(null, async i => {
     await i.reply({
       content: `Unhandled command: ${i.commandName}`,
       ephemeral: true,
@@ -201,10 +201,10 @@ async function main() {
 }
 
 main()
-  .then((res) => {
+  .then(res => {
     timedLog(`main done with ${res}`);
   })
-  .catch((e) => {
+  .catch(e => {
     timedLog(`main errored with ${e}`);
   });
 timedLog("main fired.");

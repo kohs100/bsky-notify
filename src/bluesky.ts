@@ -1,15 +1,11 @@
 import _ from "lodash";
 
 import { readFileSync, existsSync, writeFileSync } from "node:fs";
-import { AtpAgent, AppBskyFeedPost } from "@atproto/api";
-import {
-  FeedViewPost,
-  isReasonRepost,
-} from "@atproto/api/dist/client/types/app/bsky/feed/defs.js";
+import { AtpAgent, AppBskyFeedPost, AppBskyFeedDefs } from "@atproto/api";
 
 import { AugmentedFeed, timedLog } from "./base.js";
 
-function getSortDate(feed: FeedViewPost): Date | null {
+function getSortDate(feed: AppBskyFeedDefs.FeedViewPost): Date | null {
   if (feed.reason === undefined) {
     const post = feed.post;
     if (AppBskyFeedPost.isRecord(post.record)) {
@@ -21,7 +17,7 @@ function getSortDate(feed: FeedViewPost): Date | null {
     }
   } else {
     const reason = feed.reason;
-    if (isReasonRepost(reason)) {
+    if (AppBskyFeedDefs.isReasonRepost(reason)) {
       return new Date(reason.indexedAt);
     } else {
       return null;
@@ -30,9 +26,9 @@ function getSortDate(feed: FeedViewPost): Date | null {
   return null;
 }
 
-function sortFeeds(feeds: FeedViewPost[]) {
+function sortFeeds(feeds: AppBskyFeedDefs.FeedViewPost[]) {
   const filtered: AugmentedFeed[] = feeds.reduce(
-    (acc: AugmentedFeed[], feed: FeedViewPost) => {
+    (acc: AugmentedFeed[], feed: AppBskyFeedDefs.FeedViewPost) => {
       const stime = getSortDate(feed);
       if (_.isNull(stime)) {
         timedLog(`Info: null sortdate detected. skipping...\n${feed}`);
@@ -114,7 +110,7 @@ export default class BskyClient {
     const { feed: feeds, cursor: nextPage } = data;
 
     const unseen = sortFeeds(feeds).filter(
-      (feed) => date_from < feed.sortAt && feed.sortAt < date_to
+      feed => date_from < feed.sortAt && feed.sortAt < date_to
     );
     return unseen;
   }
