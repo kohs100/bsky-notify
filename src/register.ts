@@ -28,9 +28,9 @@ export const COMMANDS = [
     .toJSON(),
 ]
 
-const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
-const DISCORD_APP_ID = process.env.DISCORD_APP_ID;
-const DISCORD_SERVER_ID = process.env.DISCORD_SERVER_ID;
+const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN as string;
+const DISCORD_APP_ID = process.env.DISCORD_APP_ID as string;
+const DISCORD_SERVER_ID = process.env.DISCORD_SERVER_ID as string;
 
 async function register() {
   const rest = new REST().setToken(DISCORD_BOT_TOKEN);
@@ -43,8 +43,8 @@ async function register() {
 }
 
 register().then(res => {
-  timedLog("register done with", res);
+  timedLog(`register done with ${res}`);
 }).catch(e => {
-  timedLog("register errored with", e);
+  timedLog(`register errored with ${e}`);
 });
 timedLog("register fired.");

@@ -1,45 +1,48 @@
 import _ from 'lodash';
 
 import { readFileSync, existsSync, writeFileSync } from 'node:fs';
-import { AtpAgent } from '@atproto/api'
+import { AtpAgent, AppBskyFeedPost } from '@atproto/api'
 
-import { timedLog } from './base.js';
+import { AugmentedFeed, timedLog } from './base.js';
+import { FeedViewPost, isReasonRepost } from '@atproto/api/dist/client/types/app/bsky/feed/defs.js';
 
-function getSortDate(feed) {
-  if (Object.hasOwn(feed, "reason")) {
-    const reason = feed.reason;
-    const rtype = reason['$type'];
-    if (rtype == "app.bsky.feed.defs#reasonRepost") {
-      const repost_at = reason.indexedAt;
-      return new Date(repost_at);
-    }
-  } else {
+function getSortDate(feed: FeedViewPost): Date | null {
+  if (feed.reason === undefined) {
     const post = feed.post;
-    const record = post.record;
-    const rtype = record['$type'];
-    if (rtype == "app.bsky.feed.post") {
+    if (AppBskyFeedPost.isRecord(post.record)) {
+      const record = post.record;
       const itime = new Date(post.indexedAt);
       const ctime = new Date(record.createdAt);
       const now = new Date();
       return now < ctime ? itime : ctime;
     }
+
+  } else {
+    const reason = feed.reason;
+    if (isReasonRepost(reason)) {
+      return new Date(reason.indexedAt);
+    } else {
+      return null;
+    }
   }
   return null;
 }
 
-function sortFeeds(feeds) {
-  const filtered = feeds.reduce((acc, feed) => {
+function sortFeeds(feeds: FeedViewPost[]) {
+  const filtered: AugmentedFeed[] = feeds.reduce((acc: AugmentedFeed[], feed: FeedViewPost) => {
     const stime = getSortDate(feed);
     if (_.isNull(stime)) {
-      timedLog("Info: null sortdate detected. skipping...\n", feed);
+      timedLog(`Info: null sortdate detected. skipping...\n${feed}`);
     } else {
-      feed.sortAt = stime;
-      acc.push(feed);
+      acc.push({
+        feed: feed,
+        sortAt: stime
+      });
     }
     return acc;
   }, []);
 
-  const sorted = filtered.toSorted((f1, f2) => {
+  const sorted = filtered.toSorted((f1: AugmentedFeed, f2: AugmentedFeed) => {
     const t1 = f1.sortAt.getTime();
     const t2 = f2.sortAt.getTime();
 
@@ -48,10 +51,9 @@ function sortFeeds(feeds) {
   });
 
   let success = true;
-  timedLog("Checking sorted");
   for (let i = 0; i < sorted.length; i++) {
     if (sorted[i].sortAt != filtered[i].sortAt) {
-      timedLog("Unsorted entry:", sorted[i].sortAt, filtered[i].sortAt);
+      timedLog(`Unsorted entry: ${sorted[i].sortAt} vs ${filtered[i].sortAt}`);
       success = false;
     }
   }
@@ -63,25 +65,30 @@ function sortFeeds(feeds) {
 }
 
 export default class BskyClient {
-  constructor(server, sess_path) {
+  private sess_path: string;
+  private _agent: AtpAgent;
+
+  get agent() { return this._agent; }
+
+  constructor(server: string, sess_path: string) {
     this.sess_path = sess_path;
-    this.agent = new AtpAgent({
+    this._agent = new AtpAgent({
       service: server,
       persistSession: (evt, sess) => {
-        timedLog("persistSession:", evt);
+        timedLog(`persistSession: ${evt}`);
         writeFileSync(this.sess_path, JSON.stringify(sess));
       }
     });
   }
 
-  async login(id, passwd) {
+  async login(id: string, passwd: string) {
     if (existsSync(this.sess_path)) {
-      timedLog("Using existing session from", this.sess_path);
+      timedLog(`Using existing session from ${this.sess_path}`);
       const data = readFileSync(this.sess_path);
-      const sess = JSON.parse(data);
+      const sess = JSON.parse(data.toString());
       await this.agent.resumeSession(sess);
     } else {
-      timedLog("Logging in with", id, "...");
+      timedLog(`Logging in with [${id}] ...`);
       await this.agent.login({
         identifier: id,
         password: passwd
@@ -89,7 +96,7 @@ export default class BskyClient {
     }
   }
 
-  async getFeeds(date_from, date_to, limit) {
+  async getFeeds(date_from: Date, date_to: Date, limit: number): Promise<AugmentedFeed[]> {
     const { data } = await this.agent.getTimeline({
       limit: limit
     });

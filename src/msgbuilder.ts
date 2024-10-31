@@ -3,59 +3,67 @@ import _ from 'lodash';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, EmbedBuilder } from 'discord.js';
 
 import { singleton, timedLog } from './base.js';
-
+import { FeedViewPost } from '@atproto/api/dist/client/types/app/bsky/feed/defs.js';
+import { AppBskyEmbedImages, AppBskyFeedPost } from '@atproto/api';
+import { isImage, isViewImage } from '@atproto/api/dist/client/types/app/bsky/embed/images.js';
 export default class InteractiveMessage {
   // Private members
-  #feed = null;
-  #lifetime = null;
-  #callback = null;
+  private feed: FeedViewPost;
+  private lifetime: number;
+  private callback: (imsg: InteractiveMessage) => void;
 
-  #uri_like = null;
-  #uri_repost = null;
-  #alive = true;
-  #translated = false;
+  private uri_like: null | string = null;
+  private uri_repost: null | string = null;
+
+  private _alive = true;
+  private _translated = false;
 
   // Public read-only members
-  get uri() { return this.#feed.post.uri; };
-  get cid() { return this.#feed.post.cid; };
+  get uri() { return this.feed.post.uri; };
+  get cid() { return this.feed.post.cid; };
   get liked() {
-    return !_.isNull(this.#uri_like);
+    return !_.isNull(this.uri_like);
   }
   get reposted() {
-    return !_.isNull(this.#uri_repost);
+    return !_.isNull(this.uri_repost);
   }
   get translated() {
-    return this.#translated;
+    return this._translated;
   }
   get alive() {
-    return this.#alive;
+    return this._alive;
   }
 
-  constructor(feed, lifetime, callback) {
-    this.#feed = feed;
-    this.#lifetime = lifetime;
-    this.#callback = callback;
+  constructor(feed: FeedViewPost, lifetime: number, callback?: (imsg: InteractiveMessage) => void) {
+    this.feed = feed;
+    this.lifetime = lifetime;
+    if (callback === undefined) {
+      this.callback = () => { };
+    } else {
+      this.callback = callback;
+    }
   }
 
   buildEmbed() {
     const new_embed = new EmbedBuilder();
 
-    const post = this.#feed.post;
+    const post = this.feed.post;
 
     const author = post.author;
     const author_hndl = author.handle;
     const author_name = author.displayName;
     const author_icon = author.avatar;
 
-    new_embed.setAuthor({
-      name: author_name,
-      iconURL: author_icon
-    });
+    if (author_name && author_icon)
+      new_embed.setAuthor({
+        name: author_name,
+        iconURL: author_icon
+      });
 
     let contain_image = false;
     if (Object.hasOwn(post, "embed")) {
       const embed = post.embed;
-      if (Object.hasOwn(embed, "images")) {
+      if (AppBskyEmbedImages.isView(embed)) {
         const images = embed.images;
         if (!_.isEmpty(images)) {
           new_embed.setImage(images[0].fullsize);
@@ -73,7 +81,7 @@ export default class InteractiveMessage {
     }
 
     const record = post.record;
-    if (record['$type'] == 'app.bsky.feed.post') {
+    if (AppBskyFeedPost.isRecord(record)) {
       new_embed.setDescription(record.text);
       new_embed.setTimestamp(new Date(record.createdAt));
     }
@@ -82,7 +90,7 @@ export default class InteractiveMessage {
   }
 
   buildRow() {
-    const row = new ActionRowBuilder();
+    const row = new ActionRowBuilder<ButtonBuilder>();
 
     const btnLike = new ButtonBuilder()
       .setCustomId(`btn-bsky-like`)
@@ -98,7 +106,7 @@ export default class InteractiveMessage {
       .setStyle(this.reposted ? ButtonStyle.Success : ButtonStyle.Secondary);
     row.addComponents(btnRepost);
 
-    if (singleton.has_translator) {
+    if (singleton.translator !== null) {
       if (!this.translated) {
         const btnTranslate = new ButtonBuilder()
           .setCustomId(`btn-trans-deepl`)
@@ -113,7 +121,7 @@ export default class InteractiveMessage {
 
   async _like() {
     singleton.assert(
-      !this.liked,
+      this.uri_like === null,
       `Already defined uri_like for post ${this.uri}`
     );
 
@@ -122,12 +130,12 @@ export default class InteractiveMessage {
     } = await singleton.client.agent.like(
       this.uri, this.cid
     );
-    this.#uri_like = uri_like
+    this.uri_like = uri_like
   }
 
   async _repost() {
     singleton.assert(
-      !this.reposted,
+      this.uri_repost === null,
       `Already defined uri_repost for post ${this.uri}`
     );
 
@@ -136,27 +144,27 @@ export default class InteractiveMessage {
     } = await singleton.client.agent.repost(
       this.uri, this.cid
     );
-    this.#uri_repost = uri_repost
+    this.uri_repost = uri_repost
   }
 
   async _unlike() {
     singleton.assert(
-      this.liked,
+      this.uri_like !== null,
       `No uri_like for post ${this.uri}`
     );
 
-    await singleton.client.agent.deleteLike(this.#uri_like);
-    this.#uri_like = null;
+    await singleton.client.agent.deleteLike(this.uri_like);
+    this.uri_like = null;
   }
 
   async _unrepost() {
     singleton.assert(
-      this.reposted,
+      this.uri_repost !== null,
       `No uri_repost for post ${this.uri}`
     );
 
-    await singleton.client.agent.deleteRepost(this.#uri_repost);
-    this.#uri_repost = null;
+    await singleton.client.agent.deleteRepost(this.uri_repost);
+    this.uri_repost = null;
   }
 
   async send() {
@@ -167,13 +175,13 @@ export default class InteractiveMessage {
 
     const collector = msg.createMessageComponentCollector({
       componentType: ComponentType.Button,
-      time: this.#lifetime,
+      time: this.lifetime,
     });
 
     collector.on('end', async (collected, reason) => {
-      this.#alive = false;
+      this._alive = false;
       try {
-        this.#callback();
+        this.callback(this);
         timedLog(`collector end: reason: ${reason}`);
         await msg.edit({ components: [] });
       } catch (e) {
@@ -214,23 +222,24 @@ export default class InteractiveMessage {
         });
       } else if (tokens[1] == 'trans') {
         singleton.assert(!this.translated, "Already translated");
-        singleton.assert(singleton.has_translator, "Translator not initialized");
+        singleton.assert(singleton.translator !== null, "Translator not initialized");
 
         const embeds = [];
         for (const rembed of i.message.embeds) {
           const desc = rembed.description;
-          const tdesc = await singleton.translator.translate(desc);
+          const embed = new EmbedBuilder(rembed.data);
 
-          const embed = new EmbedBuilder(rembed);
-          embed.setFields({
-            name: 'Translated',
-            value: tdesc
-          });
-
+          if (desc) {
+            const tdesc = await singleton.translator.translate(desc);
+            embed.setFields({
+              name: 'Translated',
+              value: tdesc
+            });
+          }
           embeds.push(embed);
         }
 
-        this.#translated = true;
+        this._translated = true;
         await i.update({
           embeds: embeds,
           components: [this.buildRow()]

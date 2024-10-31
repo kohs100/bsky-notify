@@ -2,7 +2,7 @@ import _ from 'lodash';
 
 import 'dotenv/config';
 
-import { timedLog, getTimestamp, singleton, GCStorage, waitFor } from './base.js';
+import { timedLog, getTimestamp, singleton, GCStorage, waitFor, AugmentedFeed } from './base.js';
 
 import DeeplTranslator from './deepl.js';
 import BskyClient from './bluesky.js';
@@ -30,16 +30,18 @@ const DEEPL_MAX_RETRY = process.env.DEEPL_MAX_RETRY;
 const DEEPL_RETRY_AFTER = process.env.DEEPL_RETRY_AFTER;
 
 class BskyFetcher {
-  #date_last = new Date();
-  #error_cnt = 0;
-  #running = false;
-  get running() { return this.#running; };
+  private date_last = new Date();
+  private error_cnt = 0;
+  private msg_store = new GCStorage<InteractiveMessage>;
 
-  async #inner(date_from, date_to) {
-    timedLog("Start fetching new feeds...");
+  private _running = false;
+  get running() { return this._running; };
+
+  private async inner(date_from: Date, date_to: Date) {
+    // timedLog("Start fetching new feeds...");
     const feeds = await singleton.client.getFeeds(date_from, date_to, BSKY_FETCH_WINDOW);
 
-    timedLog(`Unseed feeds before filtering: ${feeds.length}`);
+    // timedLog(`Unseed feeds before filtering: ${feeds.length}`);
 
     const filtered = feeds.filter(feed => {
       if (Object.hasOwn(feed, 'reply')) {
@@ -53,7 +55,7 @@ class BskyFetcher {
     })
 
     if (_.isEmpty(filtered)) {
-      timedLog("No unseen feeds.");
+      // timedLog("No unseen feeds.");
       return;
     } else {
       const num = filtered.length;
@@ -68,34 +70,34 @@ class BskyFetcher {
       timedLog(`========== Feed ${i} end ==========`);
     });
 
-    for (const feed of filtered) {
+    for (const afeed of filtered) {
       const msg = new InteractiveMessage(
-        feed,
+        afeed.feed,
         DISCORD_CTX_LENGTH,
         imsg => {
-          singleton.msg_store.mark_dead(imsg.uri);
+          this.msg_store.mark_dead(imsg.uri);
         });
       await msg.send();
-      singleton.msg_store.add(msg.uri, msg);
+      this.msg_store.add(msg.uri, msg);
     }
-    singleton.msg_store.try_gc();
+    this.msg_store.try_gc();
   }
 
-  async #wrapped_loop() {
-    while (this.#running) {
+  private async wrapped_loop() {
+    while (this.running) {
       try {
         const now = new Date();
-        await this.#inner(this.#date_last, now);
+        await this.inner(this.date_last, now);
         // Fetch success without error
-        this.#date_last = now;
-        if (this.#error_cnt > 0) {
-          this.#error_cnt = 0;
+        this.date_last = now;
+        if (this.error_cnt > 0) {
+          this.error_cnt = 0;
           singleton.debug(`Bot recovered from error.`);
         }
       } catch (e) {
-        this.#error_cnt += 1;
-        singleton.catch(e, `Bot errored ${this.#error_cnt}`);
-        if (this.#error_cnt >= BSKY_MAX_RETRY) {
+        this.error_cnt += 1;
+        singleton.catch(e, `Bot errored ${this.error_cnt}`);
+        if (this.error_cnt >= BSKY_MAX_RETRY) {
           throw new Error(`Error count exceeded MAX_RETRY: ${BSKY_MAX_RETRY}.`)
         }
       }
@@ -105,25 +107,25 @@ class BskyFetcher {
 
   start() {
     singleton.assert(
-      !this.#running,
+      !this.running,
       "BskyFetcher already started!!"
     );
     timedLog("BskyFetcher started.");
-    this.#running = true;
-    this.#wrapped_loop()
+    this._running = true;
+    this.wrapped_loop()
       .catch(e => singleton.catch(e, "BskyFetcher loop failed!"))
       .finally(() => {
-        this.#running = false;
+        this._running = false;
       });
   }
 
   stop() {
     singleton.assert(
-      this.#running,
+      this.running,
       "BskyFetcher not started!!"
     );
     timedLog("BskyFetcher stopped.");
-    this.#running = false;
+    this._running = false;
   }
 }
 
@@ -140,7 +142,6 @@ async function init_singleton() {
 
   singleton.client = client;
   singleton.bot = bot;
-  singleton.msg_store = new GCStorage();
 
   if (_.isUndefined(DEEPL_API_KEY)) {
     timedLog("info: translator not available.");
@@ -189,8 +190,8 @@ async function main() {
 }
 
 main().then(res => {
-  timedLog("main done with", res);
+  timedLog(`main done with ${res}`);
 }).catch(e => {
-  timedLog("main errored with", e);
+  timedLog(`main errored with ${e}`);
 });
 timedLog("main fired.");
