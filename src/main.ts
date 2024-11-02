@@ -2,13 +2,7 @@ import _ from "lodash";
 
 import "dotenv/config";
 
-import {
-  GCStorage,
-  getTimestamp,
-  singleton,
-  timedLog,
-  waitFor,
-} from "./base.js";
+import { getTimestamp, singleton, timedLog, waitFor } from "./base.js";
 import BskyClient from "./bluesky.js";
 import DiscordBot from "./bot.js";
 import DeeplTranslator from "./deepl.js";
@@ -37,7 +31,6 @@ const DEEPL_RETRY_AFTER = process.env.DEEPL_RETRY_AFTER;
 class BskyFetcher {
   private date_last = new Date();
   private error_cnt = 0;
-  private msg_store = new GCStorage<InteractiveMessage>();
 
   private _running = false;
   get running() {
@@ -85,14 +78,10 @@ class BskyFetcher {
       const msg = new InteractiveMessage(
         afeed.feed,
         DISCORD_CTX_LENGTH,
-        imsg => {
-          // this.msg_store.mark_dead(imsg.uri);
-        }
+        imsg => {}
       );
       await msg.send();
-      // this.msg_store.add(msg.uri, msg);
     }
-    // this.msg_store.try_gc();
   }
 
   private async wrapped_loop() {
@@ -204,6 +193,6 @@ main()
     timedLog(`main done with ${res}`);
   })
   .catch(e => {
-    timedLog(`main errored with ${e}`);
+    timedLog(`main errored with ${e}\n${e.stack}`);
   });
 timedLog("main fired.");

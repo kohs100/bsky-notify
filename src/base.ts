@@ -7,53 +7,6 @@ import {
   MessageCreateOptions,
 } from "discord.js";
 
-export class GCStorage<T> {
-  need_gc: Boolean = false;
-  storage: Dictionary<{ alive: Boolean; value: T }> = {};
-
-  add(key: string, value: T) {
-    singleton.assert(
-      _.isUndefined(this.storage[key]),
-      `Duplicated value for key ${key}`
-    );
-    this.storage[key] = {
-      alive: true,
-      value: value,
-    };
-  }
-
-  get(key: string): T | null {
-    if (this.storage[key] === undefined) return null;
-    const aval = this.storage[key];
-    if (aval.alive) return aval.value;
-    return null;
-  }
-
-  mark_dead(key: string) {
-    singleton.assert(
-      !_.isUndefined(this.storage[key]),
-      `Trying to mark with invalid key ${key}`
-    );
-    this.storage[key].alive = false;
-    this.need_gc = true;
-  }
-
-  try_gc() {
-    if (this.need_gc) {
-      this.need_gc = false;
-      const victims = [];
-      for (const [key, aval] of Object.entries(this.storage)) {
-        const { alive: alive } = aval;
-        if (!alive) victims.push(key);
-      }
-      for (const key of victims) {
-        delete this.storage[key];
-      }
-      singleton.debug(`Evicted ${victims}`);
-    }
-  }
-}
-
 export type InteractionListener = (
   i: ChatInputCommandInteraction
 ) => Promise<void>;

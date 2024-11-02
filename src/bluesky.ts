@@ -75,11 +75,12 @@ export default class BskyClient {
 
   constructor(server: string, sess_path: string) {
     this.sess_path = sess_path;
+    timedLog(`Creating AtpAgent: ${server} -> ${sess_path}`);
     this._agent = new AtpAgent({
       service: server,
       persistSession: (evt, sess) => {
         timedLog(`persistSession: ${evt}`);
-        writeFileSync(this.sess_path, JSON.stringify(sess));
+        writeFileSync(sess_path, JSON.stringify(sess));
       },
     });
   }

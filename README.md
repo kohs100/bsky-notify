@@ -16,9 +16,6 @@ Enable bluesky feed notification through discord bot.
 
 - Multiple images support
 - (!) Self-replying post tree support
-- Integrate database to support persistent context storage
-  - ex. Persistent button interaction support
-- Dockerize?
 
 ## Configuration
 
@@ -26,9 +23,21 @@ Rename .env.example to .env and fill token informations.
 
 ## Run
 
+### Natively
+
 ```
-$ npm run build
 $ npm run start
+```
+
+### With docker
+
+```
+$ docker build . -t bsky-notify
+$ docker run \
+  --volume ./.env:/app/.env \
+  --detach \
+  --name bsky-notify \
+  bsky-notify
 ```
 
 ## References
