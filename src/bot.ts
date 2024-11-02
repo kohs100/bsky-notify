@@ -12,14 +12,14 @@ import {
 } from "discord.js";
 
 import {
-  SendInterface,
   DebugInterface,
+  Dictionary,
+  InteractionListener,
   ListenInterface,
+  SendInterface,
   getTimestamp,
   timedLog,
   waitFor,
-  InteractionListener,
-  Dictionary,
 } from "./base.js";
 
 function toError(e: unknown): Error {

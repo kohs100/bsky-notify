@@ -1,19 +1,20 @@
 import _ from "lodash";
 
 import {
+  AppBskyEmbedImages,
+  AppBskyFeedDefs,
+  AppBskyFeedPost,
+} from "@atproto/api";
+import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
   ComponentType,
   EmbedBuilder,
 } from "discord.js";
-import {
-  AppBskyEmbedImages,
-  AppBskyFeedPost,
-  AppBskyFeedDefs,
-} from "@atproto/api";
 
 import { singleton, timedLog } from "./base.js";
+
 export default class InteractiveMessage {
   // Private members
   private feed: AppBskyFeedDefs.FeedViewPost;

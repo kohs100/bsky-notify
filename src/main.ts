@@ -3,16 +3,15 @@ import _ from "lodash";
 import "dotenv/config";
 
 import {
-  timedLog,
+  GCStorage,
   getTimestamp,
   singleton,
-  GCStorage,
+  timedLog,
   waitFor,
 } from "./base.js";
-
-import DeeplTranslator from "./deepl.js";
 import BskyClient from "./bluesky.js";
 import DiscordBot from "./bot.js";
+import DeeplTranslator from "./deepl.js";
 import InteractiveMessage from "./msgbuilder.js";
 
 const BSKY_SRV = process.env.BSKY_SRV;

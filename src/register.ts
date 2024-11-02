@@ -1,7 +1,7 @@
 import _ from "lodash";
 
+import { REST, Routes, SlashCommandBuilder } from "discord.js";
 import "dotenv/config";
-import { SlashCommandBuilder, REST, Routes } from "discord.js";
 
 import { timedLog } from "./base.js";
 

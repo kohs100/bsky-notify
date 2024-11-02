@@ -7,7 +7,8 @@
     "build": "tsc",
     "start": "node dist/main.js",
     "register": "node dist/register.js",
-    "pretty": "npx prettier --write src/"
+    "pretty": "npx prettier --write src/",
+    "knip": "npx knip"
   },
   "keywords": [],
   "author": "",
@@ -25,6 +26,7 @@
   },
   "type": "module",
   "devDependencies": {
+    "@trivago/prettier-plugin-sort-imports": "^4.3.0",
     "knip": "^5.36.0",
     "prettier": "^3.3.3"
   }

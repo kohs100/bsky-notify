@@ -1,6 +1,6 @@
 import * as deepl from "deepl-node";
 
-import { singleton, waitFor, TranslatorInterface } from "./base.js";
+import { TranslatorInterface, singleton, waitFor } from "./base.js";
 
 export default class DeeplTranslator implements TranslatorInterface {
   private max_retry: number;

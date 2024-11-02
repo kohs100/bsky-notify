@@ -1,7 +1,7 @@
 import _ from "lodash";
 
-import { readFileSync, existsSync, writeFileSync } from "node:fs";
-import { AtpAgent, AppBskyFeedPost, AppBskyFeedDefs } from "@atproto/api";
+import { AppBskyFeedDefs, AppBskyFeedPost, AtpAgent } from "@atproto/api";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
 import { AugmentedFeed, timedLog } from "./base.js";
 
