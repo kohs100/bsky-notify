@@ -33,7 +33,7 @@ $ npm run start
 
 ```
 $ docker run \
-  --volume ./.env:/app/.env \
+  --volume ./.env:/app/.env:ro \
   --detach \
   --name YOUR_CONTAINER_NAME \
   kohs100/bsky-notify
