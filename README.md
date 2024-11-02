@@ -29,15 +29,25 @@ Rename .env.example to .env and fill token informations.
 $ npm run start
 ```
 
-### With docker
+### With docker (Recommended)
 
 ```
-$ docker build . -t bsky-notify
 $ docker run \
   --volume ./.env:/app/.env \
   --detach \
-  --name bsky-notify \
-  bsky-notify
+  --name YOUR_CONTAINER_NAME \
+  kohs100/bsky-notify
+```
+
+### With docker (Build yourself)
+
+```
+$ docker build . -t YOUR_IMAGE_NAME
+$ docker run \
+  --volume ./.env:/app/.env \
+  --detach \
+  --name YOUR_CONTAINER_NAME \
+  YOUR_IMAGE_NAME
 ```
 
 ## References
