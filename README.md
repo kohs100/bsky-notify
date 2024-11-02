@@ -41,10 +41,12 @@ $ docker run \
 
 ### With docker (Build yourself)
 
+Maybe you should specify .env file path with absolute path, not like (./.env).
+
 ```
 $ docker build . -t YOUR_IMAGE_NAME
 $ docker run \
-  --volume ./.env:/app/.env \
+  --volume ./.env:/app/.env:ro \
   --detach \
   --name YOUR_CONTAINER_NAME \
   YOUR_IMAGE_NAME
