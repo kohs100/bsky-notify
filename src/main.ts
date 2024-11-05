@@ -51,7 +51,7 @@ class BskyFetcher {
       if (Object.hasOwn(feed, "reply")) {
         // Ignore reply
         return false;
-      } else if (Object.hasOwn(feed, "reason")) {
+      } else if (feed.repost) {
         // Ignore repost
         return false;
       }

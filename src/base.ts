@@ -14,6 +14,7 @@ export type InteractionListener = (
 export type AugmentedFeed = {
   feed: AppBskyFeedDefs.FeedViewPost;
   sortAt: Date;
+  repost: Boolean;
 };
 
 export interface Dictionary<T> {

@@ -1,11 +1,14 @@
 import _ from "lodash";
 
 import { AppBskyFeedDefs, AppBskyFeedPost, AtpAgent } from "@atproto/api";
+import { AuditLogEvent } from "discord.js";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
 import { AugmentedFeed, timedLog } from "./base.js";
 
-function getSortDate(feed: AppBskyFeedDefs.FeedViewPost): Date | null {
+function getAugmentedFeed(
+  feed: AppBskyFeedDefs.FeedViewPost
+): AugmentedFeed | null {
   if (feed.reason === undefined) {
     const post = feed.post;
     if (AppBskyFeedPost.isRecord(post.record)) {
@@ -13,12 +16,21 @@ function getSortDate(feed: AppBskyFeedDefs.FeedViewPost): Date | null {
       const itime = new Date(post.indexedAt);
       const ctime = new Date(record.createdAt);
       const now = new Date();
-      return now < ctime ? itime : ctime;
+
+      return {
+        feed: feed,
+        sortAt: now < ctime ? itime : ctime,
+        repost: false,
+      };
     }
   } else {
     const reason = feed.reason;
     if (AppBskyFeedDefs.isReasonRepost(reason)) {
-      return new Date(reason.indexedAt);
+      return {
+        feed: feed,
+        sortAt: new Date(reason.indexedAt),
+        repost: true,
+      };
     } else {
       return null;
     }
@@ -26,17 +38,14 @@ function getSortDate(feed: AppBskyFeedDefs.FeedViewPost): Date | null {
   return null;
 }
 
-function sortFeeds(feeds: AppBskyFeedDefs.FeedViewPost[]) {
+function sortFeeds(feeds: AppBskyFeedDefs.FeedViewPost[]): AugmentedFeed[] {
   const filtered: AugmentedFeed[] = feeds.reduce(
     (acc: AugmentedFeed[], feed: AppBskyFeedDefs.FeedViewPost) => {
-      const stime = getSortDate(feed);
-      if (_.isNull(stime)) {
+      const afeed = getAugmentedFeed(feed);
+      if (_.isNull(afeed)) {
         timedLog(`Info: null sortdate detected. skipping...\n${feed}`);
       } else {
-        acc.push({
-          feed: feed,
-          sortAt: stime,
-        });
+        acc.push(afeed);
       }
       return acc;
     },
