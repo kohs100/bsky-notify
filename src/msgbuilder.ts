@@ -99,7 +99,9 @@ export default class InteractiveMessage {
 
     const record = post.record;
     if (AppBskyFeedPost.isRecord(record)) {
-      new_embed.setDescription(record.text);
+      if (record.text.length > 0) {
+        new_embed.setDescription(record.text);
+      }
       new_embed.setTimestamp(new Date(record.createdAt));
     }
 

@@ -1,7 +1,6 @@
 import _ from "lodash";
 
 import { AppBskyFeedDefs, AppBskyFeedPost, AtpAgent } from "@atproto/api";
-import { AuditLogEvent } from "discord.js";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
 import { AugmentedFeed, timedLog } from "./base.js";
