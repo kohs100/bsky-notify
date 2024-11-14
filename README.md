@@ -20,6 +20,7 @@ Enable bluesky feed notification through discord bot.
 ## Configuration
 
 Rename .env.example to .env and fill token informations.
+You can change the translation [target language](https://developers.deepl.com/docs/resources/supported-languages#target-languages) (Default is korean).
 
 ## Run
 
