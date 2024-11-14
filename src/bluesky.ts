@@ -74,17 +74,14 @@ function sortFeeds(feeds: AppBskyFeedDefs.FeedViewPost[]): AugmentedFeed[] {
 }
 
 export default class BskyClient {
-  private sess_path: string;
-  private _agent: AtpAgent;
+  public readonly agent: AtpAgent;
 
-  get agent() {
-    return this._agent;
-  }
-
-  constructor(server: string, sess_path: string) {
-    this.sess_path = sess_path;
+  constructor(
+    server: string,
+    private readonly sess_path: string
+  ) {
     timedLog(`Creating AtpAgent: ${server} -> ${sess_path}`);
-    this._agent = new AtpAgent({
+    this.agent = new AtpAgent({
       service: server,
       persistSession: (evt, sess) => {
         timedLog(`persistSession: ${evt}`);

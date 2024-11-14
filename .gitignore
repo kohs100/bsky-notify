@@ -3,3 +3,6 @@ node_modules
 .vscode
 log.stderr
 log.stdout
+
+test.js
+src/test*

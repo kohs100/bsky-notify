@@ -52,17 +52,15 @@ export default class DiscordBot
 {
   private commands: Dictionary<InteractionListener> = {};
   private default_command?: InteractionListener;
-
-  private max_retry: number;
-  private retry_after: number;
   private client: Client;
 
   private channel?: TextChannel | DMChannel;
   private dbgch?: TextChannel | DMChannel;
 
-  constructor(max_retry: number, retry_after: number) {
-    this.max_retry = max_retry;
-    this.retry_after = retry_after;
+  constructor(
+    private readonly max_retry: number,
+    private readonly retry_after: number
+  ) {
     this.client = new Client({
       intents: [],
     });

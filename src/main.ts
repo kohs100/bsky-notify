@@ -27,6 +27,7 @@ const DISCORD_CTX_LENGTH = process.env.DISCORD_CTX_LENGTH;
 const DEEPL_API_KEY = process.env.DEEPL_API_KEY;
 const DEEPL_MAX_RETRY = process.env.DEEPL_MAX_RETRY;
 const DEEPL_RETRY_AFTER = process.env.DEEPL_RETRY_AFTER;
+const DEEPL_TARGET_LANG = process.env.DEEPL_TARGET_LANG;
 
 class BskyFetcher {
   private date_last = new Date();
@@ -143,7 +144,8 @@ async function init_singleton() {
     translator = new DeeplTranslator(
       DEEPL_API_KEY,
       DEEPL_MAX_RETRY,
-      DEEPL_RETRY_AFTER
+      DEEPL_RETRY_AFTER,
+      DEEPL_TARGET_LANG
     );
     timedLog("info: translator initialized.");
   }

@@ -17,23 +17,15 @@ import { singleton, timedLog } from "./base.js";
 
 export default class InteractiveMessage {
   // Private members
-  private feed: AppBskyFeedDefs.FeedViewPost;
-  private lifetime: number;
-  private callback: (imsg: InteractiveMessage) => void;
-
   private uri_like: null | string = null;
   private uri_repost: null | string = null;
-
   private _alive = true;
   private _translated = false;
 
   // Public read-only members
-  get uri() {
-    return this.feed.post.uri;
-  }
-  get cid() {
-    return this.feed.post.cid;
-  }
+  public readonly uri: string;
+  public readonly cid: string;
+
   get liked() {
     return !_.isNull(this.uri_like);
   }
@@ -48,17 +40,12 @@ export default class InteractiveMessage {
   }
 
   constructor(
-    feed: AppBskyFeedDefs.FeedViewPost,
-    lifetime: number,
-    callback?: (imsg: InteractiveMessage) => void
+    private readonly feed: AppBskyFeedDefs.FeedViewPost,
+    private readonly lifetime: number,
+    private readonly callback: (imsg: InteractiveMessage) => void = () => {}
   ) {
-    this.feed = feed;
-    this.lifetime = lifetime;
-    if (callback === undefined) {
-      this.callback = () => {};
-    } else {
-      this.callback = callback;
-    }
+    this.uri = feed.post.uri;
+    this.cid = feed.post.cid;
   }
 
   buildEmbed() {
@@ -77,15 +64,11 @@ export default class InteractiveMessage {
         iconURL: author_icon,
       });
 
-    let contain_image = false;
-    if (Object.hasOwn(post, "embed")) {
-      const embed = post.embed;
-      if (AppBskyEmbedImages.isView(embed)) {
-        const images = embed.images;
-        if (!_.isEmpty(images)) {
-          new_embed.setImage(images[0].fullsize);
-          contain_image = true;
-        }
+    const embed = post.embed;
+    if (AppBskyEmbedImages.isView(embed)) {
+      const images = embed.images;
+      if (!_.isEmpty(images)) {
+        new_embed.setImage(images[0].fullsize);
       }
     }
 

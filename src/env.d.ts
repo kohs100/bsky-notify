@@ -1,3 +1,4 @@
+import { TargetLanguageCode } from "deepl-node";
 import * as ts from "typescript";
 
 declare global {
@@ -23,6 +24,7 @@ declare global {
       DEEPL_API_KEY: string | undefined;
       DEEPL_MAX_RETRY: number;
       DEEPL_RETRY_AFTER: number;
+      DEEPL_TARGET_LANG: TargetLanguageCode;
     }
   }
 }
