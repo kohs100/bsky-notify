@@ -8,26 +8,25 @@ import DiscordBot from "./bot.js";
 import DeeplTranslator from "./deepl.js";
 import InteractiveMessage from "./msgbuilder.js";
 
-const BSKY_SRV = process.env.BSKY_SRV;
-const BSKY_ID = process.env.BSKY_ID;
-const BSKY_PASS = process.env.BSKY_PASS;
-const BSKY_SESS = process.env.BSKY_SESS;
-const BSKY_FETCH_RATE = process.env.BSKY_FETCH_RATE;
-const BSKY_MAX_RETRY = process.env.BSKY_MAX_RETRY;
-const BSKY_FETCH_WINDOW = process.env.BSKY_FETCH_WINDOW;
-
-const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
-const DISCORD_CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
-const DISCORD_DBGCH_ID = process.env.DISCORD_DBGCH_ID;
-
-const DISCORD_MAX_RETRY = process.env.DISCORD_MAX_RETRY;
-const DISCORD_RETRY_AFTER = process.env.DISCORD_RETRY_AFTER;
-const DISCORD_CTX_LENGTH = process.env.DISCORD_CTX_LENGTH;
-
-const DEEPL_API_KEY = process.env.DEEPL_API_KEY;
-const DEEPL_MAX_RETRY = process.env.DEEPL_MAX_RETRY;
-const DEEPL_RETRY_AFTER = process.env.DEEPL_RETRY_AFTER;
-const DEEPL_TARGET_LANG = process.env.DEEPL_TARGET_LANG;
+const {
+  BSKY_SRV,
+  BSKY_ID,
+  BSKY_PASS,
+  BSKY_SESS,
+  BSKY_FETCH_RATE,
+  BSKY_MAX_RETRY,
+  BSKY_FETCH_WINDOW,
+  DISCORD_BOT_TOKEN,
+  DISCORD_CHANNEL_ID,
+  DISCORD_DBGCH_ID,
+  DISCORD_MAX_RETRY,
+  DISCORD_RETRY_AFTER,
+  DISCORD_CTX_LENGTH,
+  DEEPL_API_KEY,
+  DEEPL_MAX_RETRY,
+  DEEPL_RETRY_AFTER,
+  DEEPL_TARGET_LANG,
+} = process.env;
 
 class BskyFetcher {
   private date_last = new Date();
