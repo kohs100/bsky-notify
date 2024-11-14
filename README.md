@@ -27,6 +27,8 @@ You can change the translation [target language](https://developers.deepl.com/do
 ### Natively
 
 ```
+$ git clone https://github.com/kohs100/bsky-notify
+$ npm install
 $ npm run start
 ```
 
