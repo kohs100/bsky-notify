@@ -3,6 +3,6 @@ node_modules
 .vscode
 log.stderr
 log.stdout
-
+dist/*
 test.js
 src/test*
